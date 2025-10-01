@@ -1,0 +1,3 @@
+fastapi
+uvicorn
+metaflow==2.18.9
