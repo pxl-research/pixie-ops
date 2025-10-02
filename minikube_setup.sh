@@ -18,26 +18,25 @@ fi
 # 2. Point Docker CLI to Minikube's Docker daemon
 # This is crucial so the image is built directly into Minikube's internal registry,
 # making it instantly available for Kubernetes deployments inside Minikube.
-echo "2. Setting Docker environment to Minikube..."
-eval $(minikube docker-env)
+# echo "2. Setting Docker environment to Minikube..."
+# eval $(minikube docker-env)
 
 # 3. Automatically run the docker build command
-IMAGE_NAME="fastapi-metaflow-image:latest"
+IMAGE_NAME="pixie-ingest:latest"
 echo "3. Building Docker image: $IMAGE_NAME..."
-# The '.' assumes your Dockerfile is in the same directory as this script.
-docker build --no-cache --pull -t "$IMAGE_NAME" .
+docker build --no-cache --pull -t "$IMAGE_NAME" ./app
+minikube image load "$IMAGE_NAME"
 
+# 4. Final status check
 BUILD_STATUS=$?
-
-# 4. Reset Docker environment (optional but recommended for non-Minikube tasks)
-echo "4. Resetting Docker environment back to host machine..."
-eval $(minikube docker-env -u)
-
-# 5. Final status check
 if [ $BUILD_STATUS -eq 0 ]; then
     echo "SUCCESS: Image '$IMAGE_NAME' built successfully and available in Minikube."
 else
     echo "FAILURE: Docker image build failed (Exit code: $BUILD_STATUS)."
 fi
+
+# 5. Reset Docker environment (optional but recommended for non-Minikube tasks)
+# echo "4. Resetting Docker environment back to host machine..."
+# eval $(minikube docker-env -u)
 
 exit $BUILD_STATUS

@@ -1,11 +1,8 @@
 # Use a base Python image
-FROM python:3.9-slim
+FROM python:3.13-slim
 
 # Set the working directory in the container
 WORKDIR /app
-
-# Create a directory for Metaflow's local datastore
-RUN mkdir /metaflow-data1
 
 # Set the USERNAME environment variable
 ENV USERNAME=fastapi-user
@@ -17,7 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY . .
-
 
 # Expose the port the app will run on
 EXPOSE 8000
