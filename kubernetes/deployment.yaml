@@ -1,8 +1,9 @@
+# Deployment: controller that keeps a desired number of identical Pods running and updates them safely.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ${app_name}
-  namespace: default
+  namespace: pixie
   labels:
     app: ${app_name}
 spec:

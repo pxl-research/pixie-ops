@@ -8,7 +8,6 @@ locals {
 # NOTE: This script MUST be run manually once before the very first 'tofu init' 
 # or 'tofu apply' to ensure the 'minikube' context exists for the Kubernetes provider 
 # to load its initial configuration.
-# Do this by just calling: minikube start
 resource "null_resource" "setup_minikube" {
   # Add a dummy trigger that changes on every 'apply' attempt to ensure 
   # the script runs *before* the deployment, mitigating timing issues 
@@ -25,9 +24,26 @@ resource "null_resource" "setup_minikube" {
   }
 }
 
-# 1. Apply Deployment Manifest
+# 1. Create the Kubernetes Namespace for the application
+resource "kubernetes_manifest" "pixie_namespace" {
+  # Ensure the Minikube setup runs before attempting to create resources.
+  depends_on = [null_resource.setup_minikube]
+
+  manifest = {
+    apiVersion = "v1"
+    kind       = "Namespace"
+    metadata = {
+      name = "pixie"
+    }
+  }
+}
+
+# 2. Apply Deployment Manifest
 # We use templatefile to render the deployment.yaml, injecting local and variable values.
 resource "kubernetes_manifest" "app_deployment" {
+  # Ensure the namespace exists before deploying the application resources.
+  depends_on = [kubernetes_manifest.pixie_namespace]
+
   # yamldecode converts the rendered YAML string into a Terraform map structure.
   manifest = yamldecode(
     templatefile("${path.module}/../kubernetes/deployment.yaml", {
@@ -38,15 +54,16 @@ resource "kubernetes_manifest" "app_deployment" {
   )
 }
 
-# 2. Apply Service Manifest
+# 3. Apply Service Manifest
 # We use templatefile to render the service.yaml, injecting the application name.
 resource "kubernetes_manifest" "app_service" {
+  
   manifest = yamldecode(
     templatefile("${path.module}/../kubernetes/service.yaml", {
       app_name = local.app_name
     })
   )
 
-  # Ensure the service is created only after the deployment is fully available.
+  # Ensure the service is created only after the deployment is available.
   depends_on = [kubernetes_manifest.app_deployment]
 }

@@ -1,10 +1,13 @@
 # Defines the Kubernetes Service to expose the Deployment.
+# Service: stable virtual IP and DNS name for a set of Pods. 
+# Clients talk to the Service. 
+# The Service forwards to the right Pods.
 apiVersion: v1
 kind: Service
 metadata:
   # The service name is managed by Terraform's templatefile function.
   name: ${app_name}-svc
-  namespace: default 
+  namespace: pixie 
   labels:
     app: ${app_name}
 spec:
@@ -17,3 +20,4 @@ spec:
     protocol: TCP
     nodePort: 30080 # Node port which we use externally in requests to access the service!
   type: NodePort
+  # type: ClusterIP is only accessable within the cluster

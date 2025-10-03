@@ -15,4 +15,4 @@ terraform init
 terraform plan
 terraform apply -auto-approve
 curl -X POST $(minikube ip):30080/trigger
-```
+````
