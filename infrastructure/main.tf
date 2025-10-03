@@ -1,83 +1,29 @@
 locals {
   app_name = "pixie-ingest"
-  labels = {
-    app = local.app_name
-  }
 }
 
-resource "kubernetes_deployment" "app" {
-  metadata {
-    name = local.app_name
-    labels = local.labels
-  }
-  spec {
-    replicas = 1
-    selector {
-      match_labels = local.labels
-    }
-    template {
-      metadata {
-        labels = local.labels
-      }
-      spec {
-        container {
-          name = local.app_name
-          image = "${var.image_name}:${var.image_tag}"
-          image_pull_policy = "Never" # Do not pull from registry
-          port {
-            container_port = 8000
-          }
-          liveness_probe {
-            http_get {
-              path = "/health"
-              port = 8000
-            }
-            initial_delay_seconds = 5
-            period_seconds = 10
-          }
-          readiness_probe {
-            http_get {
-              path = "/health"
-              port = 8000
-            }
-            initial_delay_seconds = 2
-            period_seconds = 5
-          }
-          resources {
-            requests = {
-              cpu = "256m"
-              memory = "512Mi"
-            }
-            limits = {
-              cpu = "512m"
-              memory = "1024Mi"
-            }
-          }
-        }
-      }
-    }
-  }
+# 1. Apply Deployment Manifest
+# We use templatefile to render the deployment.yaml, injecting local and variable values.
+resource "kubernetes_manifest" "app_deployment" {
+  # yamldecode converts the rendered YAML string into a Terraform map structure.
+  manifest = yamldecode(
+    templatefile("${path.module}/../kubernetes/deployment.yaml", {
+      app_name    = local.app_name
+      image_name  = var.image_name
+      image_tag   = var.image_tag
+    })
+  )
 }
 
-resource "kubernetes_service" "svc" {
-  metadata {
-    name = "${local.app_name}-svc"
-    labels = local.labels
-  }
-  spec {
-    selector = local.labels
-    port {
-      port = 80 # not the port of the application
-      target_port = 8000
-      protocol = "TCP"
-    }
-    type = "NodePort"
-  }
+# 2. Apply Service Manifest
+# We use templatefile to render the service.yaml, injecting the application name.
+resource "kubernetes_manifest" "app_service" {
+  manifest = yamldecode(
+    templatefile("${path.module}/../kubernetes/service.yaml", {
+      app_name = local.app_name
+    })
+  )
+
+  # Ensure the service is created only after the deployment is fully available.
+  depends_on = [kubernetes_manifest.app_deployment]
 }
-
-# cd ./infrastructure
-# tofu init
-# tofu apply -auto-approve
-
-# tofu destroy -auto-approve
-# minikube stop
