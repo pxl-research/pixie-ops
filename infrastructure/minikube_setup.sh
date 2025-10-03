@@ -24,7 +24,7 @@ fi
 # 3. Automatically run the docker build command
 IMAGE_NAME="pixie-ingest:latest"
 echo "3. Building Docker image: $IMAGE_NAME..."
-docker build --no-cache --pull -t "$IMAGE_NAME" ./app
+docker build --no-cache --pull -t "$IMAGE_NAME" ../app
 minikube image load "$IMAGE_NAME"
 
 # 4. Final status check

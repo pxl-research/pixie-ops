@@ -15,4 +15,5 @@ spec:
   - port: 80 # The port exposed by the Service
     targetPort: 8000 # The container port to forward traffic to
     protocol: TCP
+    nodePort: 30080 # Node port which we use externally in requests to access the service!
   type: NodePort
