@@ -3,7 +3,7 @@
 # This ensures that when you run 'docker build', the image is stored directly
 # inside the Minikube environment, making it available to Kubernetes.
 # eval $(minikube docker-env)
-from metaflow import FlowSpec, step, trigger
+from metaflow import FlowSpec, step
 
 class HelloFlow(FlowSpec):
     """
@@ -24,5 +24,5 @@ class HelloFlow(FlowSpec):
     def end(self):
         print(f"Flow finished. Message: {self.message}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     HelloFlow()

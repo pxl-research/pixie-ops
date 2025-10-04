@@ -1,7 +1,8 @@
 from fastapi import FastAPI
-import subprocess
 import uuid
+from metaflow import Runner
 
+    
 app = FastAPI()
 
 
@@ -14,16 +15,17 @@ def read_root():
 def trigger_flow():
     run_uuid = str(uuid.uuid4())[:8]  # just for tracking on your side
 
-    cmd = ["python", "hello_flow.py", "run"]
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
+    #cmd = ["python", "hello_flow.py", "run"]
+    #process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #stdout, stderr = process.communicate()
+
+    with Runner("hello_flow.py", pylint=False) as runner:
+        result = runner.run(max_workers=1)
 
     return {
         "status": "finished",
         "run_uuid": run_uuid,     # your own UUID, not Metaflow's run_id
-        "stdout": stdout.decode(),
-        "stderr": stderr.decode(),
-        "exit_code": process.returncode,
+        "stdout": result.run.finished,
     }
 
 
