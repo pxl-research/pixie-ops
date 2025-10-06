@@ -1,0 +1,19 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hera-submitter-role
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - workflows
+  - workflowtemplates
+  - clusterworkflowtemplates
+  - cronworkflows
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - patch
