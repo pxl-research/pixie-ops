@@ -35,12 +35,6 @@ python3 hello_world.py
 ```
 alias terraform=tofu
 ```
-* MinIO (Replace /data with the path to the drive or directory in which you want MinIO to store data.):
-```
-wget https://dl.min.io/server/minio/release/linux-amd64/minio
-chmod +x minio
-./minio server /data
-```
 
 ```
 cd infrastructure

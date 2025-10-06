@@ -1,4 +1,4 @@
-from hera.workflows import Workflow, Steps, script
+from hera.workflows import Workflow, Steps, DAG, script
 from hera.shared import global_config
 
 import os
@@ -15,6 +15,7 @@ def echo(message: str):
     """A simple function to print a message."""
     print(message)
 
+'''
 with Workflow(
     generate_name="hello-world-",
     entrypoint="steps",
@@ -22,6 +23,17 @@ with Workflow(
 ) as w:
     with Steps(name="steps"):
         echo(arguments={"message": "Hello from Hera!"})
+'''
+
+
+with Workflow(generate_name="dag-diamond-", entrypoint="diamond", namespace="argo", ttl_seconds_after_finished=3600) as w:
+    with DAG(name="diamond"):
+        A = echo(name="A", arguments={"message": "A"})
+        B = echo(name="B", arguments={"message": "B"})
+        C = echo(name="C", arguments={"message": "C"})
+        D = echo(name="D", arguments={"message": "D"})
+
+        A >> [B, C] >> D
 
 # This submits the workflow to Argo Workflows for execution
 submitted_workflow = w.create()
