@@ -6,7 +6,6 @@ WORKDIR /app
 
 # Set the USERNAME environment variable
 ENV USERNAME=fastapi-user
-ENV METAFLOW_USER=fastapi-user
 
 # Copy requirements.txt and install dependencies
 COPY requirements.txt ./

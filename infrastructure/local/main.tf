@@ -46,7 +46,7 @@ resource "kubernetes_manifest" "app_deployment" {
 
   # yamldecode converts the rendered YAML string into a Terraform map structure.
   manifest = yamldecode(
-    templatefile("${path.module}/../kubernetes/deployment.yaml", {
+    templatefile("${path.module}/../kubernetes/base/deployment.yaml", {
       app_name    = local.app_name
       image_name  = var.image_name
       image_tag   = var.image_tag
@@ -59,7 +59,7 @@ resource "kubernetes_manifest" "app_deployment" {
 resource "kubernetes_manifest" "app_service" {
   
   manifest = yamldecode(
-    templatefile("${path.module}/../kubernetes/service.yaml", {
+    templatefile("${path.module}/../kubernetes/base/service.yaml", {
       app_name = local.app_name
     })
   )

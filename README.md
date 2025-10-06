@@ -37,7 +37,7 @@ alias terraform=tofu
 ```
 
 ```
-cd infrastructure
+cd infrastructure/local
 minikube start --cpus 2 --memory 2048mb --driver=docker
 terraform init
 terraform plan

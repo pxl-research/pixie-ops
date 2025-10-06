@@ -1,32 +1,33 @@
-from fastapi import FastAPI
-import uuid
-from metaflow import Runner
+from fastapi import FastAPI, HTTPException
+from hera.shared import global_config
+from hello_flow import HelloFlow  # Import your HelloFlow class
+import urllib3
 
-    
+# Disable SSL warnings for local Argo dev
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Configure Hera / Argo connection
+global_config.host = "https://localhost:2746"
+global_config.verify_ssl = False
+global_config.token = None
+
 app = FastAPI()
 
 
 @app.get("/")
 def read_root():
-    return {"message": "FastAPI is running and ready to start a Metaflow flow."}
+    return {"message": "FastAPI is running and ready to start a workflow."}
   
 
 @app.post("/trigger")
-def trigger_flow():
-    run_uuid = str(uuid.uuid4())[:8]  # just for tracking on your side
-
-    #cmd = ["python", "hello_flow.py", "run"]
-    #process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #stdout, stderr = process.communicate()
-
-    with Runner("hello_flow.py", pylint=False) as runner:
-        result = runner.run(max_workers=1)
-
-    return {
-        "status": "finished",
-        "run_uuid": run_uuid,     # your own UUID, not Metaflow's run_id
-        "stdout": result.run.finished,
-    }
+def trigger_workflow():
+    """Trigger the HelloFlow DAG workflow."""
+    try:
+        flow = HelloFlow()
+        result = flow.submit()  # submits the workflow and waits for completion
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to trigger workflow: {e}")
 
 
 @app.get("/health")

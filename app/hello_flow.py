@@ -1,28 +1,49 @@
-# minikube start --cpus 4 --memory 4096mb --driver=docker
-# 2. Tell your shell to use the Minikube Docker daemon.
-# This ensures that when you run 'docker build', the image is stored directly
-# inside the Minikube environment, making it available to Kubernetes.
-# eval $(minikube docker-env)
-from metaflow import FlowSpec, step
+from hera.workflows import Workflow, DAG, script
+from hera.shared import global_config
+from hera_workflow import HeraWorkflow
 
-class HelloFlow(FlowSpec):
-    """
-    A simple flow that runs on Kubernetes.
-    """
-    @step
-    def start(self):
-        print("Starting the flow.")
-        self.next(self.hello)
+@script()
+def echo(message: str):
+    """Simple Hera script that prints a message."""
+    print(message)
 
-    @step
-    def hello(self):
-        print("Hello, Metaflow on Kubernetes!")
-        self.message = "Hello from Metaflow!"
-        self.next(self.end)
 
-    @step
-    def end(self):
-        print(f"Flow finished. Message: {self.message}")
+class HelloFlow(HeraWorkflow):
+    """Hera DAG workflow with a diamond pattern."""
 
-if __name__ == "__main__":
-    HelloFlow()
+    def __init__(self, namespace: str = "argo"):
+        self.namespace = namespace
+
+    def submit(self):
+        """Create and submit the DAG workflow to Argo."""
+        with Workflow(
+            generate_name="dag-diamond-",
+            entrypoint="diamond",
+            namespace=self.namespace,
+            ttl_seconds_after_finished=3600,  # workflow auto-cleanup after 1h
+        ) as w:
+            with DAG(name="diamond"):
+                A = echo(name="A", arguments={"message": "A"})
+                B = echo(name="B", arguments={"message": "B"})
+                C = echo(name="C", arguments={"message": "C"})
+                D = echo(name="D", arguments={"message": "D"})
+                A >> [B, C] >> D
+
+        # Submit workflow
+        submitted = w.create()
+        service = w.workflows_service
+        name = submitted.metadata.name
+        namespace = submitted.metadata.namespace
+
+        # Wait for completion
+        final_workflow = service.wait_for_workflow(name=name, namespace=namespace)
+        status = final_workflow.status.phase
+
+        # Optionally, cleanup
+        # service.delete_workflow(name=name, namespace=namespace)
+
+        return {
+            "workflow_name": name,
+            "namespace": namespace,
+            "status": status,
+        }
