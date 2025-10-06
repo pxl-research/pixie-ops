@@ -25,6 +25,7 @@ kubectl apply -n argo -f hera-submitter-role.yaml
 kubectl patch deployment argo-server -n argo --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--auth-mode=server"}]'
 
 export ARGO_TOKEN="Bearer $(kubectl create token hera-submitter -n argo)"
+export ARGO_SECURE=false
 
 kubectl -n argo port-forward service/argo-server 2746:2746
 
