@@ -2,68 +2,124 @@ locals {
   app_name = "pixie-ingest"
 }
 
-# 0. Execute minikube setup script
-# This resource runs the local script to set up the minikube environment 
-# (e.g., start minikube, build and load local images).
-# NOTE: This script MUST be run manually once before the very first 'tofu init' 
-# or 'tofu apply' to ensure the 'minikube' context exists for the Kubernetes provider 
-# to load its initial configuration.
-resource "null_resource" "setup_minikube" {
-  # Add a dummy trigger that changes on every 'apply' attempt to ensure 
-  # the script runs *before* the deployment, mitigating timing issues 
-  # where the provider might check the cluster state before Minikube is ready.
-  triggers = {
-    always_run = timestamp()
+# --- 1. Setup ---
+resource "kubernetes_namespace" "argo_namespace" {
+  metadata {
+    name = "argo"
   }
+}
+resource "null_resource" "install_argo" {
+  depends_on = [
+    kubernetes_namespace.argo_namespace
+  ]
 
   provisioner "local-exec" {
-    # Assuming the script is in the current working directory relative to where 'tofu apply' is run.
-    command = "sh ./minikube_setup.sh"
-    # Execute only on creation/update of this resource.
-    when    = create 
+    command = "kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.7.2/install.yaml"
   }
 }
 
-# 1. Create the Kubernetes Namespace for the application
-resource "kubernetes_manifest" "pixie_namespace" {
-  # Ensure the Minikube setup runs before attempting to create resources.
-  depends_on = [null_resource.setup_minikube]
+# # 6. Hera RBAC and service account
+# resource "null_resource" "hera_rbac" {
+#   depends_on = [null_resource.install_argo]
 
-  manifest = {
-    apiVersion = "v1"
-    kind       = "Namespace"
-    metadata = {
-      name = "pixie"
-    }
-  }
-}
+#   provisioner "local-exec" {
+#     command = <<EOT
+# # Create Hera service account
+# kubectl create serviceaccount hera-submitter -n argo || echo "ServiceAccount exists"
 
-# 2. Apply Deployment Manifest
-# We use templatefile to render the deployment.yaml, injecting local and variable values.
-resource "kubernetes_manifest" "app_deployment" {
-  # Ensure the namespace exists before deploying the application resources.
-  depends_on = [kubernetes_manifest.pixie_namespace]
+# # Bind cluster role
+# kubectl create clusterrolebinding argo-default-task-binding \
+#   --clusterrole=hera-submitter-role \
+#   --serviceaccount=argo:default || echo "Binding exists"
 
-  # yamldecode converts the rendered YAML string into a Terraform map structure.
-  manifest = yamldecode(
-    templatefile("${path.module}/../../kubernetes/base/deployment.yaml", {
-      app_name    = local.app_name
-      image_name  = var.image_name
-      image_tag   = var.image_tag
-    })
-  )
-}
+# # Apply Hera manifests
+# kubectl apply -n argo -f ${path.module}/../../kubernetes/base/hera-binding.yaml
+# kubectl apply -n argo -f ${path.module}/../../kubernetes/base/hera-submitter-role.yaml
 
-# 3. Apply Service Manifest
-# We use templatefile to render the service.yaml, injecting the application name.
-resource "kubernetes_manifest" "app_service" {
+# # Patch argo-server deployment for server auth
+# kubectl patch deployment argo-server -n argo --type='json' \
+#   -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--auth-mode=server"}]'
+# EOT
+#   }
+# }
+
+# # Capture the Argo token as a Terraform variable
+# data "external" "argo_token" {
+#   depends_on = [null_resource.hera_rbac]
+
+#   program = [
+#     "bash",
+#     "-c",
+#     <<EOF
+# set -e
+# token=$(kubectl create token hera-submitter -n argo)
+# echo "{\"argo_token\": \"Bearer $${token}\"}"
+# EOF
+#   ]
+# }
+
+
+# # 0. Execute minikube setup script
+# resource "null_resource" "setup_minikube" {
+#   depends_on = [
+#     null_resource.hera_rbac,
+#     data.external.argo_token
+#   ]
   
-  manifest = yamldecode(
-    templatefile("${path.module}/../../kubernetes/base/service.yaml", {
-      app_name = local.app_name
-    })
-  )
+#   triggers = {
+#     always_run = timestamp()
+#   }
 
-  # Ensure the service is created only after the deployment is available.
-  depends_on = [kubernetes_manifest.app_deployment]
-}
+#   provisioner "local-exec" {
+#     environment = {
+#       ARGO_TOKEN = data.external.argo_token.result.argo_token
+#     }
+#     command = "bash ./minikube_setup.sh"
+#     when    = create
+#   }
+# }
+
+# # 1. Create the Kubernetes Namespace for the application
+# resource "kubernetes_manifest" "pixie_namespace" {
+#   depends_on = [null_resource.setup_minikube, null_resource.install_argo, null_resource.hera_rbac]
+
+#   manifest = {
+#     apiVersion = "v1"
+#     kind       = "Namespace"
+#     metadata = {
+#       name = "pixie"
+#     }
+#   }
+# }
+
+# # 2. Apply Deployment Manifest
+# resource "kubernetes_manifest" "app_deployment" {
+#   depends_on = [
+#     kubernetes_manifest.pixie_namespace,
+#     null_resource.install_argo,
+#     null_resource.hera_rbac
+#   ]
+
+#   manifest = yamldecode(
+#     templatefile("${path.module}/../../kubernetes/base/deployment.yaml", {
+#       app_name   = local.app_name
+#       image_name = var.image_name
+#       image_tag  = var.image_tag
+#     })
+#   )
+# }
+
+# # 3. Apply Service Manifest
+# resource "kubernetes_manifest" "app_service" {
+#   depends_on = [
+#     kubernetes_manifest.app_deployment,
+#     null_resource.install_argo,
+#     null_resource.hera_rbac
+#   ]
+
+#   manifest = yamldecode(
+#     templatefile("${path.module}/../../kubernetes/base/service.yaml", {
+#       app_name = local.app_name
+#     })
+#   )
+# }

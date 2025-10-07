@@ -7,6 +7,11 @@ WORKDIR /app
 # Set the USERNAME environment variable
 ENV USERNAME=fastapi-user
 
+ARG ARGO_TOKEN
+ENV ARGO_TOKEN=$ARGO_TOKEN
+
+# TODO: make sure Docker has access to environment variable
+
 # Copy requirements.txt and install dependencies
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
