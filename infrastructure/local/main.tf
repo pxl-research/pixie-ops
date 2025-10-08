@@ -10,9 +10,6 @@ resource "kubernetes_namespace" "argo_namespace" {
 }
 
 resource "helm_release" "argo_workflows" {
-  depends_on = [
-    kubernetes_namespace.argo_namespace
-  ]
   provider   = helm.minikube_conn 
   name       = "argo-workflows"
   repository = "https://argoproj.github.io/argo-helm"
@@ -21,12 +18,12 @@ resource "helm_release" "argo_workflows" {
   values = [
     file("${path.module}/../../kubernetes/base/argo-workflows-values.yaml")
   ]
+  depends_on = [
+    kubernetes_namespace.argo_namespace
+  ]
 }
 
 resource "kubectl_manifest" "hera_rbac" {
-  depends_on = [
-    helm_release.argo_workflows
-  ]
   for_each = {
     serviceaccount = "${path.module}/../../kubernetes/base/hera-submitter-sa.yaml"
     clusterrole    = "${path.module}/../../kubernetes/base/hera-submitter-role.yaml"

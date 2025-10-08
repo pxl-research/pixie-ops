@@ -24,6 +24,9 @@ provider "kubernetes" {
 
 provider "helm" {
   alias = "minikube_conn"
+  kubernetes = {
+    config_path = "~/.kube/config"
+  }
 }
 
 provider "kubectl" {
