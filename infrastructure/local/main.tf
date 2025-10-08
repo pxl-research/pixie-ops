@@ -20,6 +20,23 @@ resource "helm_release" "argo_workflows" {
   ]
 }
 
+resource "kubectl_manifest" "hera_rbac" {
+  for_each = {
+    serviceaccount = "${path.module}/../../kubernetes/base/hera-submitter-sa.yaml"
+    clusterrole    = "${path.module}/../../kubernetes/base/hera-submitter-role.yaml"
+    binding_hera   = "${path.module}/../../kubernetes/base/hera-submitter-binding.yaml"
+    binding_default = "${path.module}/../../kubernetes/base/argo-default-task-binding.yaml"
+  }
+
+  yaml_body = file(each.value)
+
+  depends_on = [
+    helm_release.argo_workflows,
+    kubernetes_namespace.argo_namespace
+  ]
+}
+
+
 /* resource "null_resource" "install_argo" {
   depends_on = [
     kubernetes_namespace.argo_namespace

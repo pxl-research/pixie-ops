@@ -37,7 +37,7 @@ kubectl apply -n argo -f hera-submitter-role.yaml
 # export ARGO_TOKEN="Bearer $(kubectl create token hera-submitter -n argo)"
 
 kubectl -n argo port-forward service/argo-server 2746:2746
-kubectl -n argo port-forward svc/argo-workflows-server 2746:2746 vis Terraform
+kubectl -n argo port-forward svc/argo-workflows-server 2746:2746 via Terraform
 
 python3 hello_world.py
 kubectl get wf -n argo

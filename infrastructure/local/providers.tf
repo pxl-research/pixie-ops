@@ -27,6 +27,7 @@ provider "helm" {
 }
 
 provider "kubectl" {
+  alias          = "minikube_conn"
   config_path    = "~/.kube/config"
   config_context = "minikube"
 }
