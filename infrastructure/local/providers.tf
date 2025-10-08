@@ -9,12 +9,21 @@ terraform {
       source  = "gavinbunney/kubectl"
       version = "1.19.0"
     }
+    helm = {
+      source = "hashicorp/helm"
+      version = "3.0.2"
+    }
   }
 }
 
 provider "kubernetes" {
+  alias          = "minikube_conn"
   config_path    = "~/.kube/config" 
   config_context = "minikube" 
+}
+
+provider "helm" {
+  alias = "minikube_conn"
 }
 
 provider "kubectl" {

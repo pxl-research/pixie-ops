@@ -1,0 +1,17 @@
+server:
+  serviceType: NodePort
+  replicas: 1
+  extraArgs:
+    - server
+    - --auth-mode=server
+    - --secure=false
+  sso:
+    enabled: false
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 2746
+      scheme: HTTP
+
+controller:
+  replicas: 1

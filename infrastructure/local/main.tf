@@ -2,46 +2,22 @@ locals {
   app_name = "pixie-ingest"
 }
 
-# --- 1. Setup ---
 resource "kubernetes_namespace" "argo_namespace" {
+  provider = kubernetes.minikube_conn
   metadata {
     name = "argo"
   }
 }
 
-# Download the YAML from the URL stored in the variable
-data "http" "argo_workflows_manifest" {
-  url = var.argo_workflows_manifest_url
-}
-
-# Split multi-document YAML into individual manifests
-data "kubectl_file_documents" "argo_workflows_docs" {
-  content = data.http.argo_workflows_manifest.response_body
-}
-
-
-# Inject namespace for namespaced resources
-locals {
-  argo_workflows_manifests = {
-    for k, doc in data.kubectl_file_documents.argo_workflows_docs.manifests :
-    k => (
-      can(yamldecode(doc).metadata.namespace)
-      ? doc
-      : yamlencode(merge(yamldecode(doc), {
-          metadata = merge(
-            yamldecode(doc).metadata,
-            { namespace = kubernetes_namespace.argo_namespace.metadata[0].name }
-          )
-        }))
-    )
-  }
-}
-
-# Apply each manifest declaratively
-resource "kubectl_manifest" "argo_workflows" {
-  for_each  = local.argo_workflows_manifests
-  yaml_body = each.value
-  depends_on = [kubernetes_namespace.argo_namespace]
+resource "helm_release" "argo_workflows" {
+  provider   = helm.minikube_conn 
+  name       = "argo-workflows"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-workflows"
+  namespace  = kubernetes_namespace.argo_namespace.metadata.0.name
+  values = [
+    file("${path.module}/../../kubernetes/base/argo-workflows-values.yaml")
+  ]
 }
 
 /* resource "null_resource" "install_argo" {
@@ -55,7 +31,7 @@ resource "kubectl_manifest" "argo_workflows" {
 }
  */
 
- 
+
 # # 6. Hera RBAC and service account
 # resource "null_resource" "hera_rbac" {
 #   depends_on = [null_resource.install_argo]

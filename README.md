@@ -2,6 +2,7 @@
 ## Installation
 * Docker
 * minikube
+    * export KUBE_CONFIG_PATH="~/.kube/config"
 * kubectl
 * Argo:
 https://github.com/argoproj/argo-workflows/releases/
@@ -21,6 +22,8 @@ kubectl patch deployment argo-server -n argo --type='json' \
     {"op": "replace", "path": "/spec/template/spec/containers/0/readinessProbe/httpGet/scheme", "value": "HTTP"}
 ]'
 
+TODO: Terraform from here...
+
 kubectl create serviceaccount hera-submitter -n argo
 kubectl create clusterrolebinding argo-default-task-binding \
     --clusterrole=hera-submitter-role \
@@ -34,6 +37,7 @@ kubectl apply -n argo -f hera-submitter-role.yaml
 # export ARGO_TOKEN="Bearer $(kubectl create token hera-submitter -n argo)"
 
 kubectl -n argo port-forward service/argo-server 2746:2746
+kubectl -n argo port-forward svc/argo-workflows-server 2746:2746 vis Terraform
 
 python3 hello_world.py
 kubectl get wf -n argo
