@@ -22,13 +22,13 @@ TODO
 ```
 
 ```
-cd infrastructure/local
+cd infrastructure/environments/development
 minikube start --cpus 2 --memory 2048mb --driver=docker
 tofu init
 tofu plan
 tofu apply -auto-approve
 kubectl -n argo port-forward svc/argo-workflows-server 2746:2746
-python3 hello_world.py
+python3 ../../../experiments/hello_world.py
 kubectl get wf -n argo
 
 TODO: via FastAPI:
