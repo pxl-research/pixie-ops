@@ -27,8 +27,8 @@ minikube start --cpus 2 --memory 2048mb --driver=docker
 tofu init
 tofu plan
 tofu apply -auto-approve
-kubectl -n argo port-forward svc/argo-workflows-server 2746:2746
-python3 ../../../experiments/hello_world.py
+./port-forwarding.sh
+python3 hello_world.py # (from the experiments folder)
 kubectl get wf -n argo
 
 TODO: via FastAPI:

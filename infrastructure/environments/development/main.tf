@@ -1,5 +1,8 @@
 locals {
-  app_name = "pixie-ingest"
+  app_name_ingest_server = "pixie-ingest"
+  app_path_ingest_server = "${path.module}/../../../apps/ingest_server"
+  k8s_path_ingest_server = "${path.module}/../../../kubernetes/apps/ingest_server"
+
   argo_namespace_name = "argo"
   pixie_namespace_name = "pixie"
 }

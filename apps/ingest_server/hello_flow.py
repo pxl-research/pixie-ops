@@ -1,6 +1,5 @@
-from hera.workflows import Workflow, DAG, script
-from hera.shared import global_config
-from hera_workflow import HeraWorkflow
+from hera.workflows import Workflow, WorkflowsService, DAG, script
+from shared.hera_workflow import HeraWorkflow
 
 @script()
 def echo(message: str):
@@ -11,16 +10,25 @@ def echo(message: str):
 class HelloFlow(HeraWorkflow):
     """Hera DAG workflow with a diamond pattern."""
 
-    def __init__(self, namespace: str = "argo"):
+    def __init__(self, namespace: str = "argo", host: str = "http://localhost:2746"):
         self.namespace = namespace
+        self.host = host
+        self.generate_name = "dag-diamond-"
+        self.entrypoint = "diamond"
+        self.ttl_seconds_after_finished = 3600
 
     def submit(self):
         """Create and submit the DAG workflow to Argo."""
         with Workflow(
-            generate_name="dag-diamond-",
-            entrypoint="diamond",
+            generate_name=self.generate_name,
+            entrypoint=self.entrypoint,
             namespace=self.namespace,
-            ttl_seconds_after_finished=3600,  # workflow auto-cleanup after 1h
+            ttl_seconds_after_finished=self.ttl_seconds_after_finished,
+            workflows_service=WorkflowsService(
+                host=self.host,
+                token=None,
+                namespace=self.namespace
+            )
         ) as w:
             with DAG(name="diamond"):
                 A = echo(name="A", arguments={"message": "A"})
@@ -30,6 +38,12 @@ class HelloFlow(HeraWorkflow):
                 A >> [B, C] >> D
 
         # Submit workflow
+        submitted_workflow = w.create(wait=True, poll_interval=2)
+        workflow_name = submitted_workflow.metadata.name
+        namespace = submitted_workflow.metadata.namespace
+        status = submitted_workflow.status.phase
+
+        '''
         submitted = w.create()
         service = w.workflows_service
         name = submitted.metadata.name
@@ -38,12 +52,13 @@ class HelloFlow(HeraWorkflow):
         # Wait for completion
         final_workflow = service.wait_for_workflow(name=name, namespace=namespace)
         status = final_workflow.status.phase
-
+        
         # Optionally, cleanup
         # service.delete_workflow(name=name, namespace=namespace)
+        '''
 
         return {
-            "workflow_name": name,
+            "workflow_name": workflow_name,
             "namespace": namespace,
             "status": status,
         }

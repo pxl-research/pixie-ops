@@ -1,18 +1,7 @@
 from fastapi import FastAPI, HTTPException
-from hera.shared import global_config
 from hello_flow import HelloFlow  # Import your HelloFlow class
-import urllib3
-
-# Disable SSL warnings for local Argo dev
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-# Configure Hera / Argo connection
-global_config.host = "https://localhost:2746"
-global_config.verify_ssl = False
-global_config.token = None
 
 app = FastAPI()
-
 
 @app.get("/")
 def read_root():

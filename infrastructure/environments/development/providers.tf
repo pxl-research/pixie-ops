@@ -13,6 +13,10 @@ terraform {
       source = "hashicorp/helm"
       version = "3.0.2"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "3.6.2"
+    }
   }
 }
 
@@ -30,4 +34,8 @@ provider "helm" {
 provider "kubectl" {
   config_path    = "~/.kube/config"
   config_context = "minikube"
+}
+
+provider "docker" {
+  host = "unix:///var/run/docker.sock"
 }
