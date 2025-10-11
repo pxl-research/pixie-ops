@@ -2,11 +2,14 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+# NOTE: Build context is not the current folder, but apps (previous folder)
+
+COPY ingest_server/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
-COPY ../shared /app/shared
+# Copy only the current app and the shared base code
+COPY ingest_server /app/
+COPY shared /app/shared
 
 EXPOSE 8000
 

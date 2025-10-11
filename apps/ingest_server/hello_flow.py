@@ -1,5 +1,11 @@
 from hera.workflows import Workflow, WorkflowsService, DAG, script
 from shared.hera_workflow import HeraWorkflow
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+ARGO_WORKFLOWS_SERVER = os.getenv("ARGO_WORKFLOWS_SERVER")
 
 @script()
 def echo(message: str):
@@ -10,7 +16,7 @@ def echo(message: str):
 class HelloFlow(HeraWorkflow):
     """Hera DAG workflow with a diamond pattern."""
 
-    def __init__(self, namespace: str = "argo", host: str = "http://localhost:2746"):
+    def __init__(self, namespace: str = "argo", host: str = ARGO_WORKFLOWS_SERVER):
         self.namespace = namespace
         self.host = host
         self.generate_name = "dag-diamond-"

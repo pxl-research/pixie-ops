@@ -7,7 +7,6 @@ app = FastAPI()
 def read_root():
     return {"message": "FastAPI is running and ready to start a workflow."}
   
-
 @app.post("/trigger")
 def trigger_workflow():
     """Trigger the HelloFlow DAG workflow."""
@@ -18,7 +17,7 @@ def trigger_workflow():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to trigger workflow: {e}")
 
-
+# TODO: health check seems to continue, only do it a limited time
 @app.get("/health")
 def health():
     return {"status": "ok"}

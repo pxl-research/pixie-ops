@@ -1,12 +1,3 @@
-locals {
-  app_name_ingest_server = "pixie-ingest"
-  app_path_ingest_server = "${path.module}/../../../apps/ingest_server"
-  k8s_path_ingest_server = "${path.module}/../../../kubernetes/apps/ingest_server"
-
-  argo_namespace_name = "argo"
-  pixie_namespace_name = "pixie"
-}
-
 resource "kubernetes_namespace" "argo_namespace" {
   metadata {
     name = local.argo_namespace_name
@@ -23,9 +14,10 @@ resource "helm_release" "argo_workflows" {
   name       = "argo-workflows"
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-workflows"
+  version    = "${local.argo_workflows_version}"
   namespace  = kubernetes_namespace.argo_namespace.metadata.0.name
   values = [
-    file("${path.module}/../../../kubernetes/base/argo-workflows-values.yaml")
+    file("${local.k8s_base_path}/argo-workflows-values.yaml")
   ]
   depends_on = [
     kubernetes_namespace.argo_namespace
@@ -34,10 +26,10 @@ resource "helm_release" "argo_workflows" {
 
 resource "kubectl_manifest" "hera_rbac" {
   for_each = {
-    serviceaccount = "${path.module}/../../../kubernetes/base/hera-submitter-sa.yaml"
-    clusterrole    = "${path.module}/../../../kubernetes/base/hera-submitter-role.yaml"
-    binding_hera   = "${path.module}/../../../kubernetes/base/hera-submitter-binding.yaml"
-    binding_default = "${path.module}/../../../kubernetes/base/argo-default-task-binding.yaml"
+    serviceaccount = "${local.k8s_base_path}/hera-submitter-sa.yaml"
+    clusterrole    = "${local.k8s_base_path}/hera-submitter-role.yaml"
+    binding_hera   = "${local.k8s_base_path}/hera-submitter-binding.yaml"
+    binding_default = "${local.k8s_base_path}/argo-default-task-binding.yaml"
   }
 
   yaml_body = file(each.value)
@@ -46,4 +38,48 @@ resource "kubectl_manifest" "hera_rbac" {
     helm_release.argo_workflows,
     kubernetes_namespace.argo_namespace
   ]
+}
+
+# ------------------------------------------------------------------------------
+# App: Ingest Server
+# ------------------------------------------------------------------------------
+
+# Build Docker image locally
+resource "docker_image" "ingest_server" {
+  name = "${local.ingest_server_image_name}:${local.ingest_server_image_tag}"
+  build {
+    context    = local.apps_path
+    dockerfile = "${local.ingest_server_app_path}/Dockerfile"
+  }
+  depends_on = [kubectl_manifest.hera_rbac]
+}
+
+# Load image into Minikube
+resource "null_resource" "minikube_image_load" {
+  provisioner "local-exec" {
+    command = "minikube image load ${docker_image.ingest_server.name}"
+  }
+  depends_on = [docker_image.ingest_server]
+}
+
+# Deployment Manifest
+resource "kubernetes_manifest" "ingest_server_deployment" {
+  manifest = yamldecode(
+    templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
+      app_name    = local.ingest_server_app_name
+      image_name  = local.ingest_server_image_name
+      image_tag   = local.ingest_server_image_tag
+    })
+  )
+  depends_on = [null_resource.minikube_image_load]
+}
+
+# Service Manifest
+resource "kubernetes_manifest" "ingest_server_service" {
+  manifest = yamldecode(
+    templatefile("${local.ingest_server_k8s_path}/service.yaml", {
+      app_name    = local.ingest_server_app_name
+    })
+  )
+  depends_on = [kubernetes_manifest.ingest_server_deployment]
 }

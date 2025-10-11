@@ -24,13 +24,13 @@ TODO
 ```
 cd infrastructure/environments/development
 minikube start --cpus 2 --memory 2048mb --driver=docker
+tofu destroy # if necessary
 tofu init
 tofu plan
 tofu apply -auto-approve
 ./port-forwarding.sh
-python3 hello_world.py # (from the experiments folder)
-kubectl get wf -n argo
 
-TODO: via FastAPI:
-curl -X POST $(minikube ip):30080/trigger
+# In other terminal:
+curl http://$(minikube ip):30080/; echo
+curl -X POST http://$(minikube ip):30080/trigger; echo
 ````
