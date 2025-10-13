@@ -3,6 +3,9 @@
 * Docker
 * minikube
     * export KUBE_CONFIG_PATH="~/.kube/config"
+    * ```
+    TODO
+    ```
 * kubectl
 * Argo:
 https://github.com/argoproj/argo-workflows/releases/
@@ -17,6 +20,11 @@ curl -sLO "https://github.com/argoproj/argo-workflows/releases/download/v3.7.2/a
 ```
 
 * OpenTofu:
+```
+TODO
+```
+
+* Azure CLI:
 ```
 TODO
 ```
