@@ -21,10 +21,6 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "3.6.2"
     }
-    random = {
-      source = "hashicorp/random"
-      version = "3.7.2"
-    }
     azurerm = {
       source  = "hashicorp/azurerm"
       version = "4.47.0"
@@ -34,9 +30,6 @@ terraform {
 
 provider "azurerm" {
   features {}
-}
-
-provider "random" {
 }
 
 provider "kubernetes" {

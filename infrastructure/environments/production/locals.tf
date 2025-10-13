@@ -15,6 +15,8 @@ locals {
   # Service Principal details for ACR/Image pulling (replace with actual values or data sources)
   # For simplicity, we'll assume the AKS managed identity will be used for ACR access.
 
+  ghcr_image_prefix = "ghcr.io/<OWNER>/<REPO>" # TODO: fill in correctly
+
   # General paths
   apps_path       = "${path.module}/../../../apps"
   k8s_apps_path   = "${path.module}/../../../kubernetes/apps"

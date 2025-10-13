@@ -26,19 +26,6 @@ resource "azurerm_kubernetes_cluster" "pixie_aks" {
   }
 }
 
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-# Azure Container Registry (ACR)
-resource "azurerm_container_registry" "pixie_acr" {
-  name                = "pxlpixieacr${random_id.suffix.hex}" # ACR names must be globally unique
-  resource_group_name = azurerm_resource_group.pixie_k8s_rg.name
-  location            = azurerm_resource_group.pixie_k8s_rg.location
-  sku                 = "Basic"
-  admin_enabled       = false # Best practice: use AKS managed identity for pulling
-}
-
 # Ensure Kubernetes providers wait for the cluster kubeconfig to be ready
 resource "time_sleep" "wait_for_aks_ready" {
   create_duration = "60s"
@@ -96,9 +83,11 @@ resource "kubectl_manifest" "hera_rbac" {
 # **Removed:** docker_image.ingest_server (Local build)
 # **Removed:** null_resource.minikube_image_load (Local load)
 
-# ACR image full name:
+# GHCR image full name:
 locals {
-  ingest_server_full_image_name = "${azurerm_container_registry.pixie_acr.login_server}/${local.ingest_server_image_name}:${local.ingest_server_image_tag}"
+  # Updated to use GHCR format (ghcr.io/<owner>/<repo>/<image>:<tag>)
+  # Assuming the owner/repo are stored in local.ghcr_image_prefix.
+  ingest_server_full_image_name = "${local.ghcr_image_prefix}/${local.ingest_server_image_name}:${local.ingest_server_image_tag}"
 }
 
 # Rollout trigger remains a good pattern for forcing redeployment on image change
@@ -120,8 +109,8 @@ resource "kubectl_manifest" "ingest_server_deployment" {
   })
   wait = false
   depends_on = [
-    null_resource.rollout_trigger, 
-    azurerm_container_registry.pixie_acr # Ensure ACR exists before deploying manifests that reference it
+    null_resource.rollout_trigger # ,
+    # azurerm_container_registry.pixie_acr # Ensure ACR exists before deploying manifests that reference it
   ]
 }
 
@@ -141,25 +130,7 @@ resource "null_resource" "hera_echo_base_image_dependency" {
   depends_on = [kubectl_manifest.ingest_server_service]
 }
 
-# Resource to grant AcrPull permission to the AKS Kubelet identity on the ACR
-resource "azurerm_role_assignment" "acr_pull_role" {
-  # The scope is the ACR resource ID
-  scope                = azurerm_container_registry.pixie_acr.id
-  
-  # The role definition ID for "AcrPull"
-  role_definition_name = "AcrPull"
-  
-  # The principal ID is the identity of the AKS cluster's Kubelet/System Identity
-  principal_id         = azurerm_kubernetes_cluster.pixie_aks.kubelet_identity[0].principal_id
-  
-  # Ensure the AKS cluster and ACR are created before attempting role assignment
-  depends_on = [
-    azurerm_kubernetes_cluster.pixie_aks,
-    azurerm_container_registry.pixie_acr
-  ]
-}
-
-# TODO (make sure these use GHCR instead of ACR and are ran inside Terraform script): 
-# docker build -t pxlpixieacr<suffix>.azurecr.io/pixie-ingest:1.0.0 /path/to/ingest_server/
-# az acr login --name pxlpixieacr<suffix>
-# docker push pxlpixieacr<suffix>.azurecr.io/pixie-ingest:1.0.0
+# TODO:
+# 1) Create a GitHub Personal Access Token (PAT) with the read:packages scope.
+# 2) Create a Kubernetes Secret of type kubernetes.io/dockerconfigjson in the relevant namespace (pixie).
+# 3) Reference this secret in the Kubernetes Deployment's imagePullSecrets field.
