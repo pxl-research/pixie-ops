@@ -1,12 +1,3 @@
-locals {
-  # Naming
-  resource_group_name = "pixie-k8s-rg"
-  aks_cluster_name    = "pixie"
-  location            = "West Europe" # Choose your desired Azure region
-  # Service Principal details for ACR/Image pulling (replace with actual values or data sources)
-  # For simplicity, we'll assume the AKS managed identity will be used for ACR access.
-}
-
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -30,6 +21,10 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "3.6.2"
     }
+    random = {
+      source = "hashicorp/random"
+      version = "3.7.2"
+    }
     azurerm = {
       source  = "hashicorp/azurerm"
       version = "4.47.0"
@@ -41,11 +36,14 @@ provider "azurerm" {
   features {}
 }
 
+provider "random" {
+}
+
 provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.aks_pixie.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.cluster_ca_certificate)
+  host                   = azurerm_kubernetes_cluster.pixie_aks.kube_config.0.host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.cluster_ca_certificate)
 }
 
 provider "null" {
@@ -53,18 +51,18 @@ provider "null" {
 
 provider "helm" {
   kubernetes {
-    host                   = azurerm_kubernetes_cluster.aks_pixie.kube_config.0.host
-    client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.client_certificate)
-    client_key             = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.client_key)
-    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.cluster_ca_certificate)
+    host                   = azurerm_kubernetes_cluster.pixie_aks.kube_config.0.host
+    client_certificate     = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.client_certificate)
+    client_key             = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.client_key)
+    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.cluster_ca_certificate)
   }
 }
 
 provider "kubectl" {
-  host                   = azurerm_kubernetes_cluster.aks_pixie.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_pixie.kube_config.0.cluster_ca_certificate)
+  host                   = azurerm_kubernetes_cluster.pixie_aks.kube_config.0.host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_config.0.cluster_ca_certificate)
 }
 
 provider "docker" {

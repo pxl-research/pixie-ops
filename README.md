@@ -3,7 +3,8 @@
 * Docker
 * minikube
     * export KUBE_CONFIG_PATH="~/.kube/config"
-    * ```
+    * 
+    ```
     TODO
     ```
 * kubectl
@@ -29,6 +30,7 @@ TODO
 TODO
 ```
 
+## Development: local deployment on minikube
 ```
 cd infrastructure/environments/development
 minikube start --cpus 2 --memory 2048mb --driver=docker
@@ -41,4 +43,10 @@ tofu apply -auto-approve
 # In other terminal:
 curl http://$(minikube ip):30080/; echo
 curl -X POST http://$(minikube ip):30080/trigger; echo
-````
+```
+
+## Production: Azure Deployment on AKS
+```
+cd infrastructure/environments/production
+# TODO
+```
