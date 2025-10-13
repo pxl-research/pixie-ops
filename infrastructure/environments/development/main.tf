@@ -62,24 +62,32 @@ resource "null_resource" "minikube_image_load" {
   depends_on = [docker_image.ingest_server]
 }
 
-# Deployment Manifest
-resource "kubernetes_manifest" "ingest_server_deployment" {
-  manifest = yamldecode(
-    templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
-      app_name    = local.ingest_server_app_name
-      image_name  = local.ingest_server_image_name
-      image_tag   = local.ingest_server_image_tag
-    })
-  )
+# Rrigger-based null_resource to capture the time of the load
+# This is a good proxy for an image change identifier
+resource "null_resource" "rollout_trigger" {
+  triggers = {
+    # This value changes every time the minikube_image_load completes
+    timestamp = timestamp()
+  }
   depends_on = [null_resource.minikube_image_load]
 }
 
+# Deployment Manifest
+resource "kubectl_manifest" "ingest_server_deployment" {
+  yaml_body = templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
+    app_name = local.ingest_server_app_name
+    image_name = local.ingest_server_image_name
+    image_tag = local.ingest_server_image_tag
+    rollout_trigger = null_resource.rollout_trigger.triggers.timestamp
+  })
+  wait = false
+  depends_on = [null_resource.minikube_image_load, null_resource.rollout_trigger]
+}
+
 # Service Manifest
-resource "kubernetes_manifest" "ingest_server_service" {
-  manifest = yamldecode(
-    templatefile("${local.ingest_server_k8s_path}/service.yaml", {
-      app_name    = local.ingest_server_app_name
-    })
-  )
-  depends_on = [kubernetes_manifest.ingest_server_deployment]
+resource "kubectl_manifest" "ingest_server_service" {
+  yaml_body = templatefile("${local.ingest_server_k8s_path}/service.yaml", {
+    app_name = local.ingest_server_app_name
+  })
+  depends_on = [kubectl_manifest.ingest_server_deployment]
 }

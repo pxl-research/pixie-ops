@@ -16,6 +16,8 @@ spec:
     metadata:
       labels:
         app: ${app_name}
+      annotations:
+        kubectl.kubernetes.io/restartedAt: ${rollout_trigger}
     spec:
       containers:
       - name: ${app_name}
