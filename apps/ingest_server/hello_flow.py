@@ -7,7 +7,8 @@ load_dotenv()
 
 ARGO_WORKFLOWS_SERVER = os.getenv("ARGO_WORKFLOWS_SERVER")
 
-@script()
+# TODO: minikube image load python:3.11-alpine in Terraform
+@script(image="python:3.11-alpine", image_pull_policy="IfNotPresent", resource_requests={"cpu": "50m", "memory": "64Mi"})
 def echo(message: str):
     """Simple Hera script that prints a message."""
     print(message)
@@ -25,16 +26,17 @@ class HelloFlow(HeraWorkflow):
 
     def submit(self):
         """Create and submit the DAG workflow to Argo."""
+        workflow_service = WorkflowsService(
+            host=self.host,
+            token=None,
+            namespace=self.namespace
+        )
         with Workflow(
             generate_name=self.generate_name,
             entrypoint=self.entrypoint,
             namespace=self.namespace,
             ttl_seconds_after_finished=self.ttl_seconds_after_finished,
-            workflows_service=WorkflowsService(
-                host=self.host,
-                token=None,
-                namespace=self.namespace
-            )
+            workflows_service=workflow_service
         ) as w:
             with DAG(name="diamond"):
                 A = echo(name="A", arguments={"message": "A"})
@@ -44,7 +46,7 @@ class HelloFlow(HeraWorkflow):
                 A >> [B, C] >> D
 
         # Submit workflow
-        submitted_workflow = w.create(wait=True, poll_interval=2)
+        submitted_workflow = w.create(wait=True, poll_interval=0.5)
         workflow_name = submitted_workflow.metadata.name
         namespace = submitted_workflow.metadata.namespace
         status = submitted_workflow.status.phase

@@ -62,7 +62,7 @@ resource "null_resource" "minikube_image_load" {
   depends_on = [docker_image.ingest_server]
 }
 
-# Rrigger-based null_resource to capture the time of the load
+# Trigger-based null_resource to capture the time of the load
 # This is a good proxy for an image change identifier
 resource "null_resource" "rollout_trigger" {
   triggers = {
@@ -90,4 +90,12 @@ resource "kubectl_manifest" "ingest_server_service" {
     app_name = local.ingest_server_app_name
   })
   depends_on = [kubectl_manifest.ingest_server_deployment]
+}
+
+# For Hera scripts:
+resource "null_resource" "minikube_image_load_hera_echo_base_image" {
+  provisioner "local-exec" {
+    command = "minikube image load python:3.11-alpine"
+  }
+  depends_on = [kubectl_manifest.ingest_server_service]
 }
