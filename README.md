@@ -48,5 +48,7 @@ curl -X POST http://$(minikube ip):30080/trigger; echo
 ## Production: Azure Deployment on AKS
 ```
 cd infrastructure/environments/production
-# TODO
+tofu init
+tofu plan
+tofu apply -auto-approve
 ```

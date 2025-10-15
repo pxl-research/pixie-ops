@@ -88,6 +88,23 @@ locals {
   # Updated to use GHCR format (ghcr.io/<owner>/<repo>/<image>:<tag>)
   # Assuming the owner/repo are stored in local.ghcr_image_prefix.
   ingest_server_full_image_name = "${local.ghcr_image_prefix}/${local.ingest_server_image_name}:${local.ingest_server_image_tag}"
+
+  # GHCR
+  ghcr_registry_server = "ghcr.io"
+  ghcr_username = "tomquaremepxl" 
+
+  # The actual Docker config JSON structure
+  docker_config_json = jsonencode({
+    auths = {
+      "${local.ghcr_registry_server}" = {
+        username = local.ghcr_username 
+        # 'GHCR_PAT' is the actual token
+        password = var.ghcr_pat 
+        # Base64 encoded 'USERNAME:PAT' string
+        auth     = base64encode("${local.ghcr_username}:${var.ghcr_pat}")
+      }
+    }
+  })
 }
 
 # Rollout trigger remains a good pattern for forcing redeployment on image change
@@ -99,6 +116,26 @@ resource "null_resource" "rollout_trigger" {
   depends_on = [kubectl_manifest.hera_rbac] # Depend on previous K8s resources
 }
 
+# Kubernetes Secret
+resource "kubernetes_secret" "ghcr_pull_secret" {
+  metadata {
+    name      = "ghcr-imagepullsecret"
+    namespace = kubernetes_namespace.pixie_namespace.metadata.0.name
+  }
+
+  type = "kubernetes.io/dockerconfigjson"
+
+  data = {
+    # The key for this type of secret must be exactly .dockerconfigjson
+    ".dockerconfigjson" = local.docker_config_json
+  }
+  
+  # Ensure the namespace is ready before creating the secret
+  depends_on = [
+    kubernetes_namespace.pixie_namespace 
+  ]
+}
+
 # Deployment Manifest - Image name updated to use ACR full path
 resource "kubectl_manifest" "ingest_server_deployment" {
   yaml_body = templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
@@ -106,10 +143,13 @@ resource "kubectl_manifest" "ingest_server_deployment" {
     image_name      = local.ingest_server_full_image_name # <--- CHANGE
     image_tag       = "" # Tag is now part of the full image name
     rollout_trigger = null_resource.rollout_trigger.triggers.timestamp
+    is_local_deployment = false 
+    image_pull_secret_name = kubernetes_secret.ghcr_pull_secret.metadata.0.name 
   })
   wait = false
   depends_on = [
-    null_resource.rollout_trigger # ,
+    null_resource.rollout_trigger,
+    kubernetes_secret.ghcr_pull_secret 
     # azurerm_container_registry.pixie_acr # Ensure ACR exists before deploying manifests that reference it
   ]
 }
@@ -129,6 +169,8 @@ resource "null_resource" "hera_echo_base_image_dependency" {
   # assuming 'python:3.11-alpine' is available from Docker Hub or a configured repository.
   depends_on = [kubectl_manifest.ingest_server_service]
 }
+
+
 
 # TODO:
 # 1) Create a GitHub Personal Access Token (PAT) with the read:packages scope.

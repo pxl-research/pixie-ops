@@ -79,6 +79,8 @@ resource "kubectl_manifest" "ingest_server_deployment" {
     image_name = local.ingest_server_image_name
     image_tag = local.ingest_server_image_tag
     rollout_trigger = null_resource.rollout_trigger.triggers.timestamp
+    is_local_deployment = true
+    image_pull_secret_name = "" # not used for local deployment, but needed for compilation
   })
   wait = false
   depends_on = [null_resource.minikube_image_load, null_resource.rollout_trigger]
