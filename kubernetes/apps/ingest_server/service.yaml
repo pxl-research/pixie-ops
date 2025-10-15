@@ -7,17 +7,22 @@ kind: Service
 metadata:
   # The service name is managed by Terraform's templatefile function.
   name: ${app_name}-svc
-  namespace: pixie 
+  namespace: ${namespace_name} 
   labels:
     app: ${app_name}
 spec:
   # The selector targets pods with the matching label.
   selector:
     app: ${app_name}
+  type: NodePort
   ports:
   - port: 80 # The port exposed by the Service
     targetPort: 8000 # The container port to forward traffic to
     protocol: TCP
     nodePort: 30080 # Node port which we use externally in requests to access the service!
-  type: NodePort
   # type: ClusterIP is only accessable within the cluster
+  # TODO: use this instead of NodePort when deployment on AKS
+  #type: LoadBalancer
+  #ports:
+  #  - port: 80
+  #    targetPort: 8000

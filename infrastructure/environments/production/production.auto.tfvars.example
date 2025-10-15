@@ -1,2 +1,3 @@
-# Rename this file to production.auto.tfvars
+# Rename this file to production.auto.tfvars (which is .gitignore'd)
+# Fill in correct values
 ghcr_pat = ""

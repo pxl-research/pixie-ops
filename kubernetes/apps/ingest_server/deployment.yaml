@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ${app_name}
-  namespace: pixie
+  namespace: ${namespace_name}
   labels:
     app: ${app_name}
 spec:

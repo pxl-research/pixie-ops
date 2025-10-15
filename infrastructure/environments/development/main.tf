@@ -76,6 +76,7 @@ resource "null_resource" "rollout_trigger" {
 resource "kubectl_manifest" "ingest_server_deployment" {
   yaml_body = templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
     app_name = local.ingest_server_app_name
+    namespace_name = local.pixie_namespace_name
     image_name = local.ingest_server_image_name
     image_tag = local.ingest_server_image_tag
     rollout_trigger = null_resource.rollout_trigger.triggers.timestamp
@@ -90,6 +91,7 @@ resource "kubectl_manifest" "ingest_server_deployment" {
 resource "kubectl_manifest" "ingest_server_service" {
   yaml_body = templatefile("${local.ingest_server_k8s_path}/service.yaml", {
     app_name = local.ingest_server_app_name
+    namespace_name = local.pixie_namespace_name
   })
   depends_on = [kubectl_manifest.ingest_server_deployment]
 }

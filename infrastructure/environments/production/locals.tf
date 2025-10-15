@@ -15,7 +15,26 @@ locals {
   # Service Principal details for ACR/Image pulling (replace with actual values or data sources)
   # For simplicity, we'll assume the AKS managed identity will be used for ACR access.
 
-  ghcr_image_prefix = "ghcr.io/<OWNER>/<REPO>" # TODO: fill in correctly
+  # GHCR
+  # Updated to use GHCR format (ghcr.io/<owner>/<repo>/<image>:<tag>)
+  # Assuming the owner/repo are stored in local.ghcr_image_prefix.
+  ghcr_registry_server = "ghcr.io"
+  ghcr_username = "tomquaremepxl" 
+  ghcr_image_prefix = "${local.ghcr_registry_server}/${local.ghcr_username}"
+  ingest_server_full_image_name = "${local.ghcr_image_prefix}/${local.ingest_server_image_name}"
+
+  # The actual Docker config JSON structure
+  docker_config_json = jsonencode({
+    auths = {
+      "${local.ghcr_registry_server}" = {
+        username = local.ghcr_username 
+        # 'GHCR_PAT' is the actual token
+        password = var.ghcr_pat 
+        # Base64 encoded 'USERNAME:PAT' string
+        auth     = base64encode("${local.ghcr_username}:${var.ghcr_pat}")
+      }
+    }
+  })
 
   # General paths
   apps_path       = "${path.module}/../../../apps"
