@@ -1,14 +1,68 @@
 # TODO: write decent readme
-## Installation
-* Docker
+## Installation on Ubuntu (native or WSL2 on Windows):
+The following dependencies are needed:
+* Docker:
+```
+sudo apt update && apt upgrade
+sudo apt install -y ca-certificates curl gnupg wget
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+
+# Install Docker Engine and associated packages
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/bin/docker-compose
+
+sudo usermod -aG docker $USER
+
+# exit current terminal and restart Ubuntu
+exit
+
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# Optional: verify Docker installation
+sudo docker run hello-world
+```
+
+* NVIDIA Container Toolkit:
+```
+# Add the GPG key
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+# Add the repository to your sources list
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+
+# Configure the container runtime for Docker and restart docker daemon
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+
+# Verify if GPU support works:
+docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi 
+```
+
 * minikube
     * export KUBE_CONFIG_PATH="~/.kube/config"
     * 
     ```
     TODO
     ```
+
 * kubectl
-* Argo:
+    ```
+    TODO
+    ```
+* Argo Workflows:
 https://github.com/argoproj/argo-workflows/releases/
 
 ```
@@ -33,7 +87,7 @@ TODO
 ## Development: local deployment on minikube
 ```
 cd infrastructure/environments/development
-minikube start --cpus 2 --memory 2048mb --driver=docker
+minikube start --cpus 2 --memory 2048mb --driver docker --container-runtime docker --gpus all
 tofu destroy # if necessary
 tofu init
 tofu plan
