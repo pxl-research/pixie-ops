@@ -33,13 +33,6 @@ data "azurerm_kubernetes_cluster" "pixie_aks_data" {
   depends_on = [azurerm_kubernetes_cluster.pixie_aks]
 }
 
-
-# Ensure Kubernetes providers wait for the cluster config to be ready
-# resource "time_sleep" "wait_for_aks_ready" {
-#   create_duration = "60s"
-#   depends_on      = [azurerm_kubernetes_cluster.pixie_aks]
-# }
-
 resource "kubernetes_namespace" "argo_namespace" {
   metadata {
     name = local.argo_namespace_name
@@ -111,7 +104,7 @@ resource "kubernetes_secret" "ghcr_pull_secret" {
 
   data = {
     # The key for this type of secret must be exactly .dockerconfigjson
-    ".dockerconfigjson" = base64encode(local.docker_config_json)
+    ".dockerconfigjson" = jsonencode(local.docker_config_json_map)
   }
   
   # Ensure the namespace is ready before creating the secret

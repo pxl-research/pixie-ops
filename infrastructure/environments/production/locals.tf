@@ -14,8 +14,7 @@ locals {
   vm_size               = "Standard_DS2_v2"
   node_count            = 1
   ghcr_registry_server  = "ghcr.io"
-  ghcr_username         = "tomquaremepxl" 
-
+  ghcr_username         = "tomquaremepxl"
 
   # TODO:
   # Service Principal details for ACR/Image pulling (replace with actual values or data sources)
@@ -27,17 +26,16 @@ locals {
   ingest_server_full_image_name = "${local.ghcr_image_prefix}/${local.ingest_server_image_name}"
 
   # The actual Docker config JSON structure
-  docker_config_json = jsonencode({
+  local_auth_token = base64encode("${local.ghcr_username}:${var.ghcr_pat}") # Base64 encoded 'USERNAME:PAT' string
+  docker_config_json_map = {
     auths = {
       "${local.ghcr_registry_server}" = {
         username = local.ghcr_username 
-        # 'GHCR_PAT' is the actual token
         password = var.ghcr_pat 
-        # Base64 encoded 'USERNAME:PAT' string
-        auth     = base64encode("${local.ghcr_username}:${var.ghcr_pat}")
+        auth     = local.local_auth_token
       }
     }
-  })
+  }
 
   # General paths
   apps_path       = "${path.module}/../../../apps"
