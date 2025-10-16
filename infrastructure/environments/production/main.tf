@@ -145,8 +145,7 @@ resource "kubectl_manifest" "ingest_server_deployment" {
     is_local_deployment = false 
     image_pull_secret_name = kubernetes_secret.ghcr_pull_secret.metadata.0.name 
   })
-  wait = true # false
-  timeout = "30m"
+  wait = false # true
   depends_on = [
     null_resource.rollout_trigger,
     kubernetes_secret.ghcr_pull_secret,
