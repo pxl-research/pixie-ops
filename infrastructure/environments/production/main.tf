@@ -136,6 +136,7 @@ resource "kubectl_manifest" "ingest_server_service" {
   yaml_body = templatefile("${local.ingest_server_k8s_path}/service.yaml", {
     app_name = local.ingest_server_app_name
     namespace_name  = kubernetes_namespace.pixie_namespace.metadata[0].name
+    is_local_deployment = false
   })
   depends_on = [kubectl_manifest.ingest_server_deployment]
 }

@@ -30,6 +30,7 @@ terraform {
 
 provider "azurerm" {
   features {}
+  subscription_id = var.azure_subscription_id
 }
 
 provider "kubernetes" {
@@ -43,7 +44,7 @@ provider "null" {
 }
 
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     host                   = azurerm_kubernetes_cluster.pixie_aks.kube_admin_config.0.host
     client_certificate     = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_admin_config.0.client_certificate)
     client_key             = base64decode(azurerm_kubernetes_cluster.pixie_aks.kube_admin_config.0.client_key)
