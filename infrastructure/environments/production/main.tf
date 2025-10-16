@@ -84,6 +84,28 @@ resource "kubectl_manifest" "hera_rbac" {
 # **Removed:** docker_image.ingest_server (Local build)
 # **Removed:** null_resource.minikube_image_load (Local load)
 
+resource "docker_image" "ingest_server" {
+  name = "${local.ingest_server_full_image_name}:${local.ingest_server_image_tag}"
+  build {
+    context    = local.ingest_server_app_path
+    dockerfile = "${local.ingest_server_app_path}/Dockerfile"
+  }
+}
+
+resource "null_resource" "push_ingest_server" {
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "${var.ghcr_pat}" | docker login ghcr.io -u ${local.ghcr_username} --password-stdin
+      docker push ${local.ingest_server_full_image_name}:${local.ingest_server_image_tag}
+    EOT
+  }
+
+  depends_on = [docker_image.ingest_server]
+}
+
+
+
+
 # Rollout trigger remains a good pattern for forcing redeployment on image change
 resource "null_resource" "rollout_trigger" {
   triggers = {
@@ -124,10 +146,12 @@ resource "kubectl_manifest" "ingest_server_deployment" {
     is_local_deployment = false 
     image_pull_secret_name = kubernetes_secret.ghcr_pull_secret.metadata.0.name 
   })
-  wait = false
+  wait = true # false
+  timeout = "30m"
   depends_on = [
     null_resource.rollout_trigger,
-    kubernetes_secret.ghcr_pull_secret 
+    kubernetes_secret.ghcr_pull_secret,
+    null_resource.push_ingest_server
     # azurerm_container_registry.pixie_acr # Ensure ACR exists before deploying manifests that reference it
   ]
 }
