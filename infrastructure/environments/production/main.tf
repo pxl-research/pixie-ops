@@ -84,12 +84,14 @@ resource "kubectl_manifest" "hera_rbac" {
 # **Removed:** docker_image.ingest_server (Local build)
 # **Removed:** null_resource.minikube_image_load (Local load)
 
+# Build Docker image locally
 resource "docker_image" "ingest_server" {
-  name = "${local.ingest_server_full_image_name}:${local.ingest_server_image_tag}"
+  name = "${local.ingest_server_image_name}:${local.ingest_server_image_tag}"
   build {
-    context    = local.ingest_server_app_path
+    context    = local.apps_path
     dockerfile = "${local.ingest_server_app_path}/Dockerfile"
   }
+  depends_on = [kubectl_manifest.hera_rbac]
 }
 
 resource "null_resource" "push_ingest_server" {
@@ -102,9 +104,6 @@ resource "null_resource" "push_ingest_server" {
 
   depends_on = [docker_image.ingest_server]
 }
-
-
-
 
 # Rollout trigger remains a good pattern for forcing redeployment on image change
 resource "null_resource" "rollout_trigger" {
