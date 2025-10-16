@@ -6,20 +6,23 @@ locals {
   ingest_server_image_name = "pixie-ingest"
   ingest_server_image_tag  = "1.0.0"
 
-  # Azure Naming
-  resource_group_name = "pixie_k8s_rg"
-  aks_cluster_name    = "pixie"
-  acr_name            = "pxlpixieacr"
-  location            = "West Europe"
+  # Azure, GHCR naming and other configuration
+  resource_group_name   = "pixie_k8s_rg"
+  aks_cluster_name      = "pixie"
+  acr_name              = "pxlpixieacr"
+  location              = "westeurope"
+  vm_size               = "Standard_DS2_v2"
+  node_count            = 1
+  ghcr_registry_server  = "ghcr.io"
+  ghcr_username         = "tomquaremepxl" 
+
+
   # TODO:
   # Service Principal details for ACR/Image pulling (replace with actual values or data sources)
-  # For simplicity, we'll assume the AKS managed identity will be used for ACR access.
 
   # GHCR
   # Updated to use GHCR format (ghcr.io/<owner>/<repo>/<image>:<tag>)
   # Assuming the owner/repo are stored in local.ghcr_image_prefix.
-  ghcr_registry_server = "ghcr.io"
-  ghcr_username = "tomquaremepxl" 
   ghcr_image_prefix = "${local.ghcr_registry_server}/${local.ghcr_username}"
   ingest_server_full_image_name = "${local.ghcr_image_prefix}/${local.ingest_server_image_name}"
 

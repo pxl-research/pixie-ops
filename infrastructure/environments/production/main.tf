@@ -13,8 +13,8 @@ resource "azurerm_kubernetes_cluster" "pixie_aks" {
 
   default_node_pool {
     name       = "default"
-    node_count = 1
-    vm_size    = "Standard_DS2_v2"
+    node_count = local.node_count
+    vm_size    = local.vm_size
   }
 
   identity {
@@ -25,6 +25,14 @@ resource "azurerm_kubernetes_cluster" "pixie_aks" {
     Environment = "LocalDev"
   }
 }
+
+# Data source to fetch the AKS cluster credentials after creation
+data "azurerm_kubernetes_cluster" "pixie_aks_data" {
+  name                = azurerm_kubernetes_cluster.pixie_aks.name
+  resource_group_name = azurerm_kubernetes_cluster.pixie_aks.resource_group_name
+  depends_on = [azurerm_kubernetes_cluster.pixie_aks]
+}
+
 
 # Ensure Kubernetes providers wait for the cluster config to be ready
 # resource "time_sleep" "wait_for_aks_ready" {
