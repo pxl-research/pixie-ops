@@ -86,7 +86,7 @@ resource "kubectl_manifest" "hera_rbac" {
 
 # Build Docker image locally
 resource "docker_image" "ingest_server" {
-  name = "${local.ingest_server_image_name}:${local.ingest_server_image_tag}"
+  name = "${local.ingest_server_full_image_name}:${local.ingest_server_image_tag}"
   build {
     context    = local.apps_path
     dockerfile = "${local.ingest_server_app_path}/Dockerfile"
@@ -94,15 +94,24 @@ resource "docker_image" "ingest_server" {
   depends_on = [kubectl_manifest.hera_rbac]
 }
 
+# Login and push Docker image
+resource "null_resource" "ghcr_login" {
+  provisioner "local-exec" {
+    command = "echo \"${var.ghcr_pat}\" | docker login ghcr.io -u ${local.ghcr_username} --password-stdin"
+  }
+  depends_on = [docker_image.ingest_server]
+}
+
 resource "null_resource" "push_ingest_server" {
   provisioner "local-exec" {
-    command = <<EOT
-      echo "${var.ghcr_pat}" | docker login ghcr.io -u ${local.ghcr_username} --password-stdin
-      docker push ${local.ingest_server_full_image_name}:${local.ingest_server_image_tag}
-    EOT
+    command = "docker push ${local.ingest_server_full_image_name}:${local.ingest_server_image_tag}"
   }
 
-  depends_on = [docker_image.ingest_server]
+  # Ensure the image is built and the login is complete before pushing
+  depends_on = [
+    docker_image.ingest_server,
+    null_resource.ghcr_login,
+  ]
 }
 
 # Rollout trigger remains a good pattern for forcing redeployment on image change
