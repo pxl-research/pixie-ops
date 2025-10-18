@@ -2,8 +2,11 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# NOTE: Build context is not the current folder, but apps (previous folder)
+# Build arguments as environment variables in container
+ARG ARGO_WORKFLOWS_SERVER
+ENV ARGO_WORKFLOWS_SERVER=${ARGO_WORKFLOWS_SERVER}
 
+# NOTE: Build context is not the current folder, but apps (previous folder)
 COPY ingest_server/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

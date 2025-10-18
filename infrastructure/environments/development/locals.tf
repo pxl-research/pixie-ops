@@ -17,4 +17,5 @@ locals {
   
   # Packages
   argo_workflows_version = "0.45.26" # this is 3.7.2 outside of helm
+  argo_workflows_server = "http://argo-workflows-server.argo.svc.cluster.local:2746"
 }

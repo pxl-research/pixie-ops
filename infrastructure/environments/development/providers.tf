@@ -47,6 +47,9 @@ provider "kubectl" {
   config_context = "minikube"
 }
 
+data "external" "docker_host_lookup" {
+  program = ["bash", "-c", "docker context inspect --format '{\"host\":\"{{.Endpoints.docker.Host}}\"}'"]
+}
 provider "docker" {
-  host = "unix:///var/run/docker.sock"
+  host = "unix:///var/run/docker.sock" # data.external.docker_host_lookup.result.host
 }

@@ -88,7 +88,7 @@ TODO
 ```
 cd infrastructure/environments/development
 minikube start --cpus 2 --memory 2048mb --driver docker --container-runtime docker --gpus all
-tofu destroy # if necessary
+tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
 tofu apply -auto-approve

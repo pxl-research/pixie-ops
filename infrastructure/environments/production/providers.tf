@@ -59,6 +59,9 @@ provider "kubectl" {
   cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.cluster_ca_certificate)
 }
 
+data "external" "docker_host_lookup" {
+  program = ["bash", "-c", "docker context inspect --format '{\"host\":\"{{.Endpoints.docker.Host}}\"}'"]
+}
 provider "docker" {
-  host = "unix:///var/run/docker.sock"
+  host = "unix:///var/run/docker.sock" # data.external.docker_host_lookup.result.host
 }
