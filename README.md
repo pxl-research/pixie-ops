@@ -88,6 +88,9 @@ TODO
 ```
 cd infrastructure/environments/development
 minikube start --cpus 2 --memory 2048mb --driver docker --container-runtime docker --gpus all
+minikube update-context
+kubectl config current-context # make sure minikube is current context
+
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
@@ -106,4 +109,13 @@ az login --use-device-code
 tofu init
 tofu plan
 tofu apply -auto-approve
+
+az aks get-credentials --resource-group pixie_k8s_rg --name pixie
+kubectl config current-context
+
+kubectl get svc -n argo
+kubectl port-forward svc/argo-workflows-server 2746:2746 -n argo
+
+curl http://$(kubectl get service pixie-ingest-svc --namespace pixie -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/; echo
+curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/trigger; echo
 ```

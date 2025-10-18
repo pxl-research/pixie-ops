@@ -37,14 +37,14 @@ resource "kubernetes_namespace" "argo_namespace" {
   metadata {
     name = local.argo_namespace_name
   }
-  depends_on = [azurerm_kubernetes_cluster.pixie_aks]
+  depends_on = [azurerm_kubernetes_cluster.pixie_aks, data.azurerm_kubernetes_cluster.pixie_aks_data]
 }
 
 resource "kubernetes_namespace" "pixie_namespace" {
   metadata {
     name = local.pixie_namespace_name
   }
-  depends_on = [azurerm_kubernetes_cluster.pixie_aks]
+  depends_on = [azurerm_kubernetes_cluster.pixie_aks, data.azurerm_kubernetes_cluster.pixie_aks_data]
 }
 
 resource "helm_release" "argo_workflows" {
@@ -57,7 +57,8 @@ resource "helm_release" "argo_workflows" {
     file("${local.k8s_base_path}/argo-workflows-values.yaml")
   ]
   depends_on = [
-    kubernetes_namespace.argo_namespace
+    kubernetes_namespace.argo_namespace, 
+    azurerm_kubernetes_cluster.pixie_aks
   ]
 }
 
@@ -73,7 +74,8 @@ resource "kubectl_manifest" "hera_rbac" {
 
   depends_on = [
     helm_release.argo_workflows,
-    kubernetes_namespace.argo_namespace
+    kubernetes_namespace.argo_namespace,
+    azurerm_kubernetes_cluster.pixie_aks
   ]
 }
 
@@ -90,6 +92,9 @@ resource "docker_image" "ingest_server" {
   build {
     context    = local.apps_path
     dockerfile = "${local.ingest_server_app_path}/Dockerfile"
+    build_args = {
+      ARGO_WORKFLOWS_SERVER = local.argo_workflows_server
+    }
   }
   depends_on = [kubectl_manifest.hera_rbac]
 }
