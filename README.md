@@ -119,3 +119,8 @@ kubectl port-forward svc/argo-workflows-server 2746:2746 -n argo
 curl http://$(kubectl get service pixie-ingest-svc --namespace pixie -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/; echo
 curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/trigger; echo
 ```
+
+## TODO list:
+* In production: use same port forwarding script as in local development?
+* In production: use an Ingress Controller instead of a Load Balancer directly in the service.yaml!
+* Health check only needed for limited time.
