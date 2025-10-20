@@ -87,19 +87,23 @@ TODO
 ## Development: local deployment on minikube
 ```
 cd infrastructure/environments/development
-minikube start --cpus 2 --memory 2048mb --driver docker --container-runtime docker --gpus all
-minikube update-context
-kubectl config current-context # make sure minikube is current context
+sudo ./minikube_setup.sh
 
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
 tofu apply -auto-approve
-./port-forwarding.sh
+
+./port_forwarding.sh
 
 # In other terminal:
-curl http://$(minikube ip):30080/; echo
-curl -X POST http://$(minikube ip):30080/trigger; echo
+# curl http://$(minikube ip):30080/; echo
+# curl -X POST http://$(minikube ip):30080/trigger; echo
+
+curl http://local.dev.pixie-ingest.com/; echo
+curl -X POST http://local.dev.pixie-ingest.com/trigger; echo
+
+
 ```
 
 ## Production: Azure Deployment on AKS
@@ -123,4 +127,5 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ## TODO list:
 * In production: use same port forwarding script as in local development?
 * In production: use an Ingress Controller instead of a Load Balancer directly in the service.yaml!
+Adjust curl commands in readme accordingly.
 * Health check only needed for limited time.

@@ -100,10 +100,25 @@ resource "kubectl_manifest" "ingest_server_service" {
   depends_on = [kubectl_manifest.ingest_server_deployment]
 }
 
+# Ingress Manifest (NEW)
+resource "kubectl_manifest" "ingest_server_ingress" {
+  yaml_body = templatefile("${local.k8s_base_path}/ingress.yaml", {
+    app_name = local.ingest_server_app_name
+    namespace_name = local.pixie_namespace_name
+    # Use a local domain. You'll need to update your /etc/hosts file with minikube IP.
+    ingress_host = local.ingress_host 
+  })
+  depends_on = [
+    kubectl_manifest.ingest_server_service
+  ]
+}
+
 # For Hera scripts:
 resource "null_resource" "minikube_image_load_hera_echo_base_image" {
   provisioner "local-exec" {
     command = "minikube image load python:3.11-alpine"
   }
-  depends_on = [kubectl_manifest.ingest_server_service]
+  depends_on = [
+    kubectl_manifest.ingest_server_ingress
+  ]
 }
