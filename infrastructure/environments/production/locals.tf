@@ -46,6 +46,9 @@ locals {
   ingest_server_app_path = "${local.apps_path}/ingest_server"
   ingest_server_k8s_path = "${local.k8s_apps_path}/ingest_server"
 
+  # Ingress
+  ingress_host = "local.dev.pixie-ingest.com"
+
   # Packages
   argo_workflows_version = "0.45.26" # this is 3.7.2 outside of helm
   argo_workflows_server = "http://argo-workflows-server.argo.svc.cluster.local:2746" # TODO: Is this ok? or should it be "https://argo-workflows.pixie.westeurope.cloudapp.azure.com"

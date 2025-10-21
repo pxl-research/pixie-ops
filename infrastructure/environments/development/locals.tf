@@ -1,5 +1,6 @@
 locals {
   # Naming
+  cluster_name = "pixie"
   argo_namespace_name = "argo"
   pixie_namespace_name = "pixie"
   ingest_server_app_name = "pixie-ingest"
@@ -16,7 +17,9 @@ locals {
   ingest_server_k8s_path = "${local.k8s_apps_path}/ingest_server"
 
   # Ingress
-  ingress_host = "local.dev.pixie-ingest.com"
+  ingress_version = "4.7.1"
+  ingress_host = "localhost"
+  ingress_namespace = "ingress-nginx"
   
   # Packages
   argo_workflows_version = "0.45.26" # this is 3.7.2 outside of helm

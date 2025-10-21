@@ -58,6 +58,18 @@ docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi
     TODO
     ```
 
+* kind:
+```
+# Linux
+[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-linux-amd64
+# For M1 / ARM Macs
+[ $(uname -m) = arm64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-darwin-arm64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+
+```
+
+
 * kubectl
     ```
     TODO
@@ -87,8 +99,6 @@ TODO
 ## Development: local deployment on minikube
 ```
 cd infrastructure/environments/development
-sudo ./minikube_setup.sh
-
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
@@ -97,11 +107,9 @@ tofu apply -auto-approve
 ./port_forwarding.sh
 
 # In other terminal:
-# curl http://$(minikube ip):30080/; echo
-# curl -X POST http://$(minikube ip):30080/trigger; echo
 
-curl http://local.dev.pixie-ingest.com/; echo
-curl -X POST http://local.dev.pixie-ingest.com/trigger; echo
+curl http://localhost:8080/; echo
+curl -X POST http://localhost:8080/trigger; echo
 
 
 ```
@@ -129,3 +137,6 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 * In production: use an Ingress Controller instead of a Load Balancer directly in the service.yaml!
 Adjust curl commands in readme accordingly.
 * Health check only needed for limited time.
+
+Note: only use CI/CD to build containers when pushing to main.
+Changing production should be done by manually applying Terraform/OpenTofu.
