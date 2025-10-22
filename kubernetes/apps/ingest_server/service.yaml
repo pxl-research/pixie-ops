@@ -11,30 +11,18 @@ metadata:
   labels:
     app: ${app_name}
 spec:
-  # The service type is now ClusterIP for both local and cloud.
+  # ClusterIP is a stable virtual IP that never changes.
+  # It is only reachable from within the cluster.
   type: ClusterIP  
-  # The selector targets pods with the matching label.
+  # The selector targets pods (or pods in Deployment) with the matching label.
+  # If no Pods match the selector, the Service has no endpoints (connection refused)
+  # Pods must have all labels specified in the Service selector to receive traffic.
+  # Both key and value must match and this for each key value pair.
+  # We keep this simple by using 1 selector: (app: app_name)
   selector:
     app: ${app_name}
   ports:
-  - port: 80 # The Service port the Ingress Controller will target
-    targetPort: 8000 # The container port to forward traffic to
-    protocol: TCP    
-
-
-# %{ if is_local_deployment == true }
-#   # type: ClusterIP is only accessable within the cluster
-#   type: NodePort
-#   ports:
-#   - port: 80 # The port exposed by the Service
-#     targetPort: 8000 # The container port to forward traffic to
-#     protocol: TCP
-#     nodePort: 30080 # Node port which we use externally in requests to access the service!
-# %{ endif }
-# %{ if is_local_deployment == false }
-#   type: LoadBalancer
-#   ports:
-#   - port: 80
-#     targetPort: 8000
-#     protocol: TCP
-# %{ endif }
+  - name: http
+    port: 80 # Service port the Ingress Controller will target
+    targetPort: ${app_target_port} # The container port to forward traffic to
+    protocol: TCP

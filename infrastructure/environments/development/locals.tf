@@ -13,15 +13,22 @@ locals {
   k8s_base_path = "${path.module}/../../../kubernetes/base"
   
   # Apps specific paths
+  # Ingest server
   ingest_server_app_path = "${local.apps_path}/ingest_server"
   ingest_server_k8s_path = "${local.k8s_apps_path}/ingest_server"
+  ingest_server_ingress_path = "/ingest"
+  ingest_server_target_port = 8000
+  ingest_server_replica_count = 1
 
   # Ingress
   ingress_version = "4.7.1"
   ingress_host = "localhost"
-  ingress_namespace = "ingress-nginx"
+  ingress_namespace_name = "ingress-nginx"
   
   # Packages
   argo_workflows_version = "0.45.26" # this is 3.7.2 outside of helm
-  argo_workflows_server = "http://argo-workflows-server.argo.svc.cluster.local:2746"
+  argo_workflows_service_name = "argo-workflows-server"
+  argo_workflows_port = 2746
+  # Always use Service DNS names, not IPs!
+  argo_workflows_server = "http://${local.argo_workflows_service_name}.${local.argo_namespace_name}.svc.cluster.local:${local.argo_workflows_port}"
 }

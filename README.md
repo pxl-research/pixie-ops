@@ -51,13 +51,6 @@ sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi 
 ```
 
-* minikube
-    * export KUBE_CONFIG_PATH="~/.kube/config"
-    * 
-    ```
-    TODO
-    ```
-
 * kind:
 ```
 # Linux
@@ -133,10 +126,9 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Look at PersistentVolumes, PersistantVolumeClaims, StatefulSets.
+* Set up cluster first and separate from the rest.
 * In production: use same port forwarding script as in local development?
-* In production: use an Ingress Controller instead of a Load Balancer directly in the service.yaml!
-Adjust curl commands in readme accordingly.
-* Health check only needed for limited time.
 
 Note: only use CI/CD to build containers when pushing to main.
 Changing production should be done by manually applying Terraform/OpenTofu.

@@ -1,15 +1,26 @@
 ########################################
 # NAMESPACE CREATION
 ########################################
-resource "kubernetes_namespace" "pixie_namespace" {
-  metadata {
-    name = local.pixie_namespace_name
-  }
+#resource "kubernetes_namespace" "pixie_namespace" {
+#  metadata {
+#    name = local.pixie_namespace_name
+#  }
+#
+#  depends_on = [
+#    kind_cluster.default
+#  ]
+#}
+
+resource "kubectl_manifest" "pixie_namespace" {
+  yaml_body = templatefile("${local.k8s_base_path}/namespace.yaml", {
+    namespace_name          = local.pixie_namespace_name
+  })
 
   depends_on = [
     kind_cluster.default
   ]
 }
+
 
 ########################################
 # HELM RELEASES
@@ -25,7 +36,7 @@ resource "helm_release" "argo_workflows" {
   values = [file("${local.k8s_base_path}/argo-workflows-values.yaml")]
 
   depends_on = [
-    kubernetes_namespace.pixie_namespace
+    kubectl_manifest.pixie_namespace
   ]
 }
 
@@ -34,13 +45,13 @@ resource "helm_release" "ingress_nginx" {
   repository       = "https://kubernetes.github.io/ingress-nginx"
   chart            = "ingress-nginx"
   version          = local.ingress_version
-  namespace        = local.ingress_namespace
+  namespace        = local.ingress_namespace_name
   create_namespace = true
 
   values = [file("${local.k8s_base_path}/ingress-nginx-values.yaml")]
 
   depends_on = [
-    kubernetes_namespace.pixie_namespace
+    kubectl_manifest.pixie_namespace
   ]
 }
 
@@ -130,13 +141,15 @@ resource "null_resource" "rollout_trigger" {
 resource "kubectl_manifest" "ingest_server_deployment" {
 
   yaml_body = templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
-    app_name              = local.ingest_server_app_name
-    namespace_name        = local.pixie_namespace_name
-    image_name            = local.ingest_server_image_name
-    image_tag             = local.ingest_server_image_tag
-    rollout_trigger       = null_resource.rollout_trigger.triggers.timestamp
-    is_local_deployment   = true
-    image_pull_secret_name = ""
+    app_name                = local.ingest_server_app_name
+    namespace_name          = local.pixie_namespace_name
+    image_name              = local.ingest_server_image_name
+    image_tag               = local.ingest_server_image_tag
+    rollout_trigger         = null_resource.rollout_trigger.triggers.timestamp
+    is_local_deployment     = true
+    image_pull_secret_name  = ""
+    target_port             = local.ingest_server_target_port
+    replica_count           = local.ingest_server_replica_count
   })
 
   wait = false
@@ -153,6 +166,7 @@ resource "kubectl_manifest" "ingest_server_service" {
     app_name       = local.ingest_server_app_name
     namespace_name = local.pixie_namespace_name
     is_local_deployment = true
+    app_target_port = local.ingest_server_target_port
   })
 
   depends_on = [kubectl_manifest.ingest_server_deployment]
@@ -164,6 +178,7 @@ resource "kubectl_manifest" "ingest_server_ingress" {
     app_name       = local.ingest_server_app_name
     namespace_name = local.pixie_namespace_name
     ingress_host   = local.ingress_host
+    ingress_path   = local.ingest_server_ingress_path 
   })
 
   depends_on = [

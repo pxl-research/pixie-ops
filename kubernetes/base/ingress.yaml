@@ -16,7 +16,7 @@ spec:
   - host: ${ingress_host} 
     http:
       paths:
-      - path: /
+      - path: ${ingress_path} 
         pathType: Prefix # Matches traffic for / and any subpath (e.g., /trigger)
         backend:
           service:

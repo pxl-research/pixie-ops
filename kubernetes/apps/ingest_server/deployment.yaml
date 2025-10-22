@@ -1,3 +1,4 @@
+# Deployment: for stateless applications
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,10 +6,22 @@ metadata:
   namespace: ${namespace_name}
   labels:
     app: ${app_name}
+# spec is the desired state which gets reconciled by controller.
+# If there are too few Pods, it creates more.
+# If there are too many, it removes extras.
+# If Pods are unhealthy, it replaces them.
 spec:
-  replicas: 1
+  replicas: ${replica_count}
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 1200
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
   selector:
-    matchLabels:
+    matchLabels: # so service.yaml matches this deployment.yaml
       app: ${app_name}
   template:
     metadata:
@@ -30,19 +43,23 @@ spec:
           imagePullPolicy: Always
 %{ endif }
           ports:
-            - containerPort: 8000
+            - containerPort: ${target_port}
           livenessProbe:
             httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 10
+              path: /livez
+              port: ${target_port}
+            initialDelaySeconds: 60
+            periodSeconds: 1200 # how often to probe in seconds
+            timeoutSeconds: 3 # how many seconds can request be
+            failureThreshold: 3 # consecutive failures before action
           readinessProbe:
             httpGet:
-              path: /health
-              port: 8000
-            initialDelaySeconds: 2
-            periodSeconds: 5
+              path: /readyz
+              port: ${target_port}
+            initialDelaySeconds: 30
+            periodSeconds: 300 # how often to probe in seconds
+            successThreshold: 3 # must succeed 3 times
+            failureThreshold: 2 # consecutive failures before action
           resources:
             requests:
               cpu: "128m"
