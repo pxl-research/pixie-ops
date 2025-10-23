@@ -126,7 +126,18 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Look at PersistentVolumes, PersistantVolumeClaims, StatefulSets.
+* secret.yaml: Use Secret for database password.
+* storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.
+    * Define different tiers (fast-ssd, slow-hdd, etc.)
+    * Let dynamic provisioning handle the details
+* statefulset.yaml: Use StatefulSet with PersistentVolumeClaims defined in it. PVCs can be expanded but not shrunk, thus request only what you need.
+  * Database Storage: Use StatefulSet with RWO PVCs. Each replica gets its own storage.
+  * Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
+  * Scratch Space: Use emptyDir for temporary data processing that doesn't need persistence; survives pod restart but not pod deletion.
+  * Choose the right reclaim policy:
+    * Retain for production databases.
+    * Delete for development and temporary data.
+   
 * Set up cluster first and separate from the rest.
 * In production: use same port forwarding script as in local development?
 
