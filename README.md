@@ -1,4 +1,7 @@
 # TODO: write decent readme
+This is an attempt to create a simple DevOps/MLOps framework to quickly deploy cloud native applications on Kubernetes.
+Please ignore everything below currently!
+
 ## Installation on Ubuntu (native or WSL2 on Windows):
 The following dependencies are needed:
 * Docker:
