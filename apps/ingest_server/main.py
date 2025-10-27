@@ -8,10 +8,8 @@ app = FastAPI()
 def read_root():
     return {"message": "FastAPI is running and ready to start a workflow."}
 
-
 @app.post("/trigger")
 def trigger_workflow():
-    """Trigger the HelloFlow DAG workflow."""
     try:
         flow = HelloFlow()
         result = flow.submit()  # submits the workflow and waits for completion
@@ -24,7 +22,6 @@ def trigger_workflow():
 # Liveness and readiness checks
 # -----------------------------
 is_healthy: bool = True
-
 
 @app.get("/livez")
 def livez(response: Response) -> dict[str, str]:

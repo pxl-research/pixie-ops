@@ -12,7 +12,7 @@ metadata:
 # If Pods are unhealthy, it replaces them.
 spec:
   replicas: ${replica_count}
-  revisionHistoryLimit: 2
+  revisionHistoryLimit: 2 # TODO: templatize
   progressDeadlineSeconds: 1200
   minReadySeconds: 10
   strategy:

@@ -100,9 +100,6 @@ resource "docker_image" "ingest_server" {
   build {
     context    = local.apps_path
     dockerfile = "${local.ingest_server_app_path}/Dockerfile"
-    build_args = {
-      ARGO_WORKFLOWS_SERVER = local.argo_workflows_server
-    }
   }
 
   depends_on = [kubectl_manifest.hera_rbac]

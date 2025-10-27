@@ -27,8 +27,8 @@ locals {
   
   # Packages
   argo_workflows_version = "0.45.26" # this is 3.7.2 outside of helm
-  argo_workflows_service_name = "argo-workflows-server"
-  argo_workflows_port = 2746
-  # Always use Service DNS names, not IPs!
-  argo_workflows_server = "http://${local.argo_workflows_service_name}.${local.argo_namespace_name}.svc.cluster.local:${local.argo_workflows_port}"
+  #argo_workflows_service_name = "argo-workflows-server"
+  #argo_workflows_port = 2746
+  ## Always use Service DNS names, not IPs!
+  #argo_workflows_server = "http://${local.argo_workflows_service_name}.${local.argo_namespace_name}.svc.cluster.local:${local.argo_workflows_port}"
 }

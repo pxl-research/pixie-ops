@@ -104,8 +104,8 @@ tofu apply -auto-approve
 
 # In other terminal:
 
-curl http://localhost:8080/; echo
-curl -X POST http://localhost:8080/trigger; echo
+curl http://localhost:8080/ingest; echo
+curl -X POST http://localhost:8080/ingest/trigger; echo
 
 
 ```

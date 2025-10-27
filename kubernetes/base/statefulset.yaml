@@ -1,28 +1,35 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: postgres
+  name: ${app_name}
+  namespace: ${namespace_name}
+  labels:
+    app: ${app_name}
 spec:
-  serviceName: postgres
-  replicas: 3
+  serviceName: ${app_name}
+  replicas: ${replica_count}
+  revisionHistoryLimit: 2 # TODO: templatize
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0 # only pods with ordinal >= 0 will be updated (thus all).
   selector:
-    matchLabels:
-      app: postgres
+    matchLabels: # so service.yaml matches this statefulset.yaml
+      app: ${app_name}
   template:
     metadata:
       labels:
-        app: postgres
+        app: ${app_name}
+        annotations:
+          kubectl.kubernetes.io/restartedAt: ${rollout_trigger}
     spec:
+%{ if is_local_deployment == false }
+      imagePullSecrets:
+        - name: ${image_pull_secret_name}
+%{ endif }
       containers:
-      - name: postgres
-        image: postgres:14
-        # Add required environment variable from the secret
-        env:
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret # <-- References the Secret name
-              key: POSTGRES_PASSWORD
+      - name: ${app_name}
+        image: ${image_name}:${image_tag}
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
