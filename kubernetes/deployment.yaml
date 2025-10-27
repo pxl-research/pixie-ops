@@ -12,7 +12,7 @@ metadata:
 # If Pods are unhealthy, it replaces them.
 spec:
   replicas: ${replica_count}
-  revisionHistoryLimit: 2 # TODO: templatize
+  revisionHistoryLimit: 2
   progressDeadlineSeconds: 1200
   minReadySeconds: 10
   strategy:
@@ -44,6 +44,7 @@ spec:
 %{ endif }
           ports:
             - containerPort: ${target_port}
+%{ if has_probing == true }
           livenessProbe:
             httpGet:
               path: /livez
@@ -60,10 +61,11 @@ spec:
             periodSeconds: 300 # how often to probe in seconds
             successThreshold: 3 # must succeed 3 times
             failureThreshold: 2 # consecutive failures before action
+%{ endif }
           resources:
             requests:
-              cpu: "128m"
-              memory: "256Mi"
+              cpu: ${request_cpu} # e.g. "128m"
+              memory: ${request_memory} # e.g. "256Mi"
             limits:
-              cpu: "256m"
-              memory: "1Gi"
+              cpu: ${limit_cpu} # e.g. "256m"
+              memory: ${limit_memory} # e.g. "1Gi"

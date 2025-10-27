@@ -8,7 +8,7 @@ metadata:
 spec:
   serviceName: ${app_name}
   replicas: ${replica_count}
-  revisionHistoryLimit: 2 # TODO: templatize
+  revisionHistoryLimit: 2
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -32,7 +32,7 @@ spec:
         image: ${image_name}:${image_tag}
         volumeMounts:
         - name: data
-          mountPath: /var/lib/postgresql/data
+          mountPath: ${volume_mount_path} # /var/lib/postgresql/data
   volumeClaimTemplates:  # Creates a PVC for each replica
   - metadata:
       name: data

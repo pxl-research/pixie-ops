@@ -137,7 +137,7 @@ resource "null_resource" "rollout_trigger" {
 
 resource "kubectl_manifest" "ingest_server_deployment" {
 
-  yaml_body = templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
+  yaml_body = templatefile("${local.k8s_base_path}/deployment.yaml", {
     app_name                = local.ingest_server_app_name
     namespace_name          = local.pixie_namespace_name
     image_name              = local.ingest_server_image_name
@@ -147,6 +147,11 @@ resource "kubectl_manifest" "ingest_server_deployment" {
     image_pull_secret_name  = ""
     target_port             = local.ingest_server_target_port
     replica_count           = local.ingest_server_replica_count
+    has_probing             = local.ingest_server_has_probing
+    request_cpu             = local.ingest_server_request_cpu
+    request_memory          = local.ingest_server_request_memory
+    limit_cpu               = local.ingest_server_limit_cpu
+    limit_memory            = local.ingest_server_limit_memory
   })
 
   wait = false
@@ -159,7 +164,7 @@ resource "kubectl_manifest" "ingest_server_deployment" {
 
 resource "kubectl_manifest" "ingest_server_service" {
 
-  yaml_body = templatefile("${local.ingest_server_k8s_path}/service.yaml", {
+  yaml_body = templatefile("${local.k8s_base_path}/service.yaml", {
     app_name       = local.ingest_server_app_name
     namespace_name = local.pixie_namespace_name
     is_local_deployment = true
