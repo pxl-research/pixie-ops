@@ -1,4 +1,3 @@
-
 resource "kubectl_manifest" "pixie_namespace" {
   yaml_body = templatefile("${local.k8s_base_path}/namespace.yaml", {
     namespace_name        = local.pixie_namespace_name
@@ -8,7 +7,6 @@ resource "kubectl_manifest" "pixie_namespace" {
     kind_cluster.default
   ]
 }
-
 
 ########################################
 # HELM RELEASES
@@ -118,9 +116,12 @@ resource "null_resource" "rollout_trigger" {
   depends_on = [null_resource.kind_image_load_app]
 }
 
-# 4. Create Kubernetes Deployment for each app using for_each
+# 4a. Create Kubernetes Deployment for each app using for_each
 resource "kubectl_manifest" "app_deployment" {
-  for_each = local.app_configs
+  for_each = {
+      for k, v in local.app_configs : k => v
+      if try(v.deployment, null) != null
+    }
 
   yaml_body = templatefile("${local.k8s_base_path}/deployment.yaml", {
     app_name            = each.value.metadata.app_name
@@ -146,6 +147,8 @@ resource "kubectl_manifest" "app_deployment" {
     null_resource.rollout_trigger
   ]
 }
+
+// TODO: # 4b. Create Kubernetes StatefulSet for each app using for_each
 
 # 5. Create Kubernetes Service for each app using for_each
 resource "kubectl_manifest" "app_service" {
