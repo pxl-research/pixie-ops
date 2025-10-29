@@ -17,26 +17,10 @@ locals {
   # Packages
   argo_workflows_version = "0.45.26" # this is 3.7.2 outside of helm
 
-  # Apps specific paths
-  # TODO: make a more generic hashmap out of this, dividing it in deployment/statefulset, service, ingress submaps
-  # Ingest server
-  # deployment, service, ingress
-  ingest_server_app_name = "pixie-ingest"
-  ingest_server_target_port = 8000
-  # Docker (put this under deployment?)
-  ingest_server_app_path = "${local.apps_path}/ingest_server" # Docker image
-  # deployment.yaml or statefulset.yaml
-  ingest_server_replica_count = 1
-  ingest_server_has_probing = true
-  ingest_server_image_name = "pixie-ingest"
-  ingest_server_image_tag = "1.0.0"
-  ingest_server_request_cpu = "128m"
-  ingest_server_request_memory = "256Mi"
-  ingest_server_limit_cpu = "256m"
-  ingest_server_limit_memory = "1Gi"
-  #ingest_server_request_storage = "10Gi" # only for statefulset.yaml
-  # ingress.yaml
-  ingest_server_ingress_path = "/ingest" # root path for this service
+  # List of base images to load for Argo Workflows
+  base_images_to_load = [
+    "python:3.11-alpine",
+  ]
 
   # Application Configuration Map (The structure for dynamic deployment)
   app_configs = {
@@ -51,6 +35,7 @@ locals {
         has_probing       = true
         image_name        = "pixie-ingest"
         image_tag         = "1.0.1"
+        context           = "${local.apps_path}"
         docker_build_path = "${local.apps_path}/ingest_server"
         request_cpu       = "128m"
         request_memory    = "256Mi"
@@ -66,33 +51,4 @@ locals {
       }
     }
   }
-
-  /*
-  {
-    "metadata": {
-      "app_name": "pixie-ingest",
-      "namespace_name": "pixie",
-      "target_port": 8000, # container port
-    }
-    "deployment": { # or "statefulset"
-      "replica_count": 1,
-      "has_probing": true,
-      "image_name": "pixie-ingest",
-      "image_tag": "1.0.0",
-      "docker_build_path": "${local.apps_path}/ingest_server",
-      "request_cpu": "128m",
-      "request_memory": "256Mi",
-      "limit_cpu": "256m",
-      "limit_memory": "1Gi",
-      # "request_storage": "10Gi" # only for statefulset
-    },
-    "service": {
-      "type": "ClusterIP"
-    },
-    "ingress": {
-      "enabled": true,
-      "path": "/ingest"
-    }
-}
-  */
 }

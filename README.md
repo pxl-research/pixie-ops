@@ -51,7 +51,7 @@ sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 
 # Verify if GPU support works:
-docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi 
+docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi
 ```
 
 * kind:
@@ -100,14 +100,11 @@ tofu init
 tofu plan
 tofu apply -auto-approve
 
+# Only use this in another terminal if you want to inspect workflows via the browser (during development)
 ./port_forwarding.sh
-
-# In other terminal:
 
 curl http://localhost:8080/ingest; echo
 curl -X POST http://localhost:8080/ingest/trigger; echo
-
-
 ```
 
 ## Production: Azure Deployment on AKS
@@ -129,7 +126,6 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* secret.yaml: Use Secret for database password.
 * storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.
     * Define different tiers (fast-ssd, slow-hdd, etc.)
     * Let dynamic provisioning handle the details
@@ -140,7 +136,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
   * Choose the right reclaim policy:
     * Retain for production databases.
     * Delete for development and temporary data.
-   
+
 * Set up cluster first and separate from the rest.
 * In production: use same port forwarding script as in local development?
 
