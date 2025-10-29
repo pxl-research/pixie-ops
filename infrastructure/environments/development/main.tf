@@ -1,10 +1,13 @@
-resource "kubectl_manifest" "pixie_namespace" {
+resource "kubectl_manifest" "project_namespace" {
+  # Only create this resource when the cluster is NOT being created in this run.
+  count = var.create_cluster ? 0 : 1
+
   yaml_body = templatefile("${local.k8s_base_path}/namespace.yaml", {
-    namespace_name        = local.pixie_namespace_name
+    namespace_name = local.project_namespace_name
   })
 
   depends_on = [
-    kind_cluster.default
+    kind_cluster.default # Dependency remains, but is satisfied or skipped based on count
   ]
 }
 
@@ -12,6 +15,8 @@ resource "kubectl_manifest" "pixie_namespace" {
 # HELM RELEASES
 ########################################
 resource "helm_release" "argo_workflows" {
+  count = var.create_cluster ? 0 : 1
+
   name             = "argo-workflows"
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-workflows"
@@ -22,11 +27,14 @@ resource "helm_release" "argo_workflows" {
   values = [file("${local.k8s_base_path}/argo-workflows-values.yaml")]
 
   depends_on = [
-    kubectl_manifest.pixie_namespace
+    # Reference the singular instance [0]
+    kubectl_manifest.project_namespace[0]
   ]
 }
 
 resource "helm_release" "ingress_nginx" {
+  count = var.create_cluster ? 0 : 1
+
   name             = "ingress-nginx"
   repository       = "https://kubernetes.github.io/ingress-nginx"
   chart            = "ingress-nginx"
@@ -37,7 +45,8 @@ resource "helm_release" "ingress_nginx" {
   values = [file("${local.k8s_base_path}/ingress-nginx-values.yaml")]
 
   depends_on = [
-    kubectl_manifest.pixie_namespace
+    # Reference the singular instance [0]
+    kubectl_manifest.project_namespace[0]
   ]
 }
 
@@ -45,21 +54,26 @@ resource "helm_release" "ingress_nginx" {
 # WAIT FOR INGRESS CONTROLLER
 ########################################
 resource "null_resource" "wait_for_ingress_nginx" {
+  count = var.create_cluster ? 0 : 1
+
   triggers = {
     key = uuid()
   }
 
   provisioner "local-exec" {
-    command = "echo 'Waiting for the nginx ingress controller...' && kubectl wait --namespace ${helm_release.ingress_nginx.namespace} --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=600s"
+    # Reference the singular instance [0]
+    command = "echo 'Waiting for the nginx ingress controller...' && kubectl wait --namespace ${helm_release.ingress_nginx[0].namespace} --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=600s"
   }
 
-  depends_on = [helm_release.ingress_nginx]
+  # Reference the singular instance [0]
+  depends_on = [helm_release.ingress_nginx[0]]
 }
 ########################################
 # RBAC CONFIGURATION
 ########################################
 resource "kubectl_manifest" "hera_rbac" {
-  for_each = {
+  # Use conditional map: empty map if true, static map if false
+  for_each = var.create_cluster ? {} : {
     serviceaccount  = "${local.k8s_base_path}/hera-submitter-sa.yaml"
     clusterrole     = "${local.k8s_base_path}/hera-submitter-role.yaml"
     binding_hera    = "${local.k8s_base_path}/hera-submitter-binding.yaml"
@@ -69,8 +83,9 @@ resource "kubectl_manifest" "hera_rbac" {
   yaml_body = file(each.value)
 
   depends_on = [
-    helm_release.argo_workflows,
-    null_resource.wait_for_ingress_nginx
+    # Reference the singular instances [0]
+    helm_release.argo_workflows[0],
+    null_resource.wait_for_ingress_nginx[0]
   ]
 }
 
@@ -81,34 +96,42 @@ resource "kubectl_manifest" "hera_rbac" {
 
 # 1. Build the local Docker image for each app using for_each
 resource "docker_image" "app" {
-  for_each = local.app_configs
+  # Use conditional map: empty map if true, app_configs if false
+  for_each = var.create_cluster ? {} : local.app_configs
+
   name = "${each.value.deployment.image_name}:${each.value.deployment.image_tag}"
   build {
-    context    = "${each.value.deployment.context}"
-    dockerfile = "${each.value.deployment.docker_build_path}/Dockerfile"
+    context    = "${each.value.deployment.docker_context}"
+    dockerfile = "${each.value.deployment.dockerfile_path}/Dockerfile"
   }
-  depends_on = [kubectl_manifest.hera_rbac]
+  depends_on = [
+    kubectl_manifest.hera_rbac # Already a for_each resource, no [0] needed
+  ]
 }
 
 # 2. Load the image into Kind for each app using for_each
 resource "null_resource" "kind_image_load_app" {
-  for_each = local.app_configs
+  # Use conditional map: empty map if true, app_configs if false
+  for_each = var.create_cluster ? {} : local.app_configs
+
   triggers = {
     image_id     = docker_image.app[each.key].image_id
-    cluster_name = kind_cluster.default.name
+    cluster_name = local.cluster_name
   }
   provisioner "local-exec" {
-    command = "kind load docker-image ${docker_image.app[each.key].name} --name ${kind_cluster.default.name}"
+    command = "kind load docker-image ${docker_image.app[each.key].name} --name ${local.cluster_name}"
   }
+
   depends_on = [
+    kind_cluster.default,
     docker_image.app,
-    kind_cluster.default
   ]
 }
 
 # 3. Rollout trigger (to redeploy on image rebuild) for each app using for_each
 resource "null_resource" "rollout_trigger" {
-  for_each = local.app_configs
+  # Use conditional map: empty map if true, app_configs if false
+  for_each = var.create_cluster ? {} : local.app_configs
 
   triggers = {
     timestamp = timestamp()
@@ -118,14 +141,15 @@ resource "null_resource" "rollout_trigger" {
 
 # 4a. Create Kubernetes Deployment for each app using for_each
 resource "kubectl_manifest" "app_deployment" {
+  # Filter the map to only include apps that have a deployment config AND create_cluster is false
   for_each = {
       for k, v in local.app_configs : k => v
-      if try(v.deployment, null) != null
+      if !var.create_cluster && try(v.deployment, null) != null
     }
 
   yaml_body = templatefile("${local.k8s_base_path}/deployment.yaml", {
     app_name            = each.value.metadata.app_name
-    namespace_name      = local.pixie_namespace_name
+    namespace_name      = local.project_namespace_name
     is_local_deployment = local.is_local_deployment
     target_port         = each.value.metadata.target_port
     image_name          = each.value.deployment.image_name
@@ -152,10 +176,12 @@ resource "kubectl_manifest" "app_deployment" {
 
 # 5. Create Kubernetes Service for each app using for_each
 resource "kubectl_manifest" "app_service" {
-  for_each = local.app_configs
+  # Use conditional map: empty map if true, app_configs if false
+  for_each = var.create_cluster ? {} : local.app_configs
+
   yaml_body = templatefile("${local.k8s_base_path}/service.yaml", {
     app_name          = each.value.metadata.app_name
-    namespace_name    = local.pixie_namespace_name
+    namespace_name    = local.project_namespace_name
     is_local_deployment = local.is_local_deployment
     target_port       = each.value.metadata.target_port
   })
@@ -164,22 +190,23 @@ resource "kubectl_manifest" "app_service" {
 
 # 6. Create Kubernetes Ingress for each app that has ingress enabled
 resource "kubectl_manifest" "app_ingress" {
-  # Filter the map to only include apps where ingress is enabled
+  # Filter the map to only include apps where ingress is enabled AND create_cluster is false
   for_each = {
     for k, v in local.app_configs : k => v
-    if v.ingress.enabled
+    if !var.create_cluster && v.ingress.enabled
   }
 
   yaml_body = templatefile("${local.k8s_base_path}/ingress.yaml", {
     app_name          = each.value.metadata.app_name
-    namespace_name    = local.pixie_namespace_name
+    namespace_name    = local.project_namespace_name
     ingress_host      = local.ingress_host
     ingress_path      = each.value.ingress.path
   })
 
   depends_on = [
     kubectl_manifest.app_service,
-    helm_release.ingress_nginx
+    # Reference the singular instance [0]
+    helm_release.ingress_nginx[0]
   ]
 }
 
@@ -187,15 +214,15 @@ resource "kubectl_manifest" "app_ingress" {
 # HERA BASE IMAGE LOAD
 ########################################
 resource "null_resource" "kind_image_load_base_images" {
-  for_each = toset(local.base_images_to_load) # ensure images are unique
+  # Use conditional set: empty set if true, set of images if false
+  for_each = var.create_cluster ? toset([]) : toset(local.base_images_to_load) # ensure images are unique
 
   triggers = {
-    # The key (which is the image name itself) is used as a trigger
     image_name   = each.key
-    cluster_name = kind_cluster.default.name
+    cluster_name = local.cluster_name
   }
   provisioner "local-exec" {
-    command = "kind load docker-image ${each.value} --name ${kind_cluster.default.name}"
+    command = "kind load docker-image ${each.value} --name ${local.cluster_name}"
   }
 
   depends_on = [

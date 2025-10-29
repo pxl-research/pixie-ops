@@ -40,10 +40,11 @@ terraform {
 }
 
 ########################################
-# KIND CLUSTER CREATION
+# CLUSTER CREATION
 ########################################
 resource "kind_cluster" "default" {
-  name            = "kind"
+  count           = 1
+  name            = local.cluster_name
   kubeconfig_path = local.kube_config_path
   wait_for_ready  = true
 
@@ -81,19 +82,22 @@ resource "kind_cluster" "default" {
 
 # Kubernetes provider (default)
 provider "kubernetes" {
-  host                   = kind_cluster.default.endpoint
-  client_certificate     = kind_cluster.default.client_certificate
-  client_key             = kind_cluster.default.client_key
-  cluster_ca_certificate = kind_cluster.default.cluster_ca_certificate
+  # FIX: Conditionally reference the single instance (index [0]) only if it exists (var.create_cluster is true).
+  # If the cluster is NOT being created, fall back to reading the kubeconfig file via the path (null value).
+  host                   = kind_cluster.default[0].endpoint
+  client_certificate     = kind_cluster.default[0].client_certificate
+  client_key             = kind_cluster.default[0].client_key
+  cluster_ca_certificate = kind_cluster.default[0].cluster_ca_certificate
 }
 
 # Helm provider (default)
 provider "helm" {
   kubernetes = {
-    host                   = kind_cluster.default.endpoint
-    client_certificate     = kind_cluster.default.client_certificate
-    client_key             = kind_cluster.default.client_key
-    cluster_ca_certificate = kind_cluster.default.cluster_ca_certificate
+    # FIX: Conditionally reference the single instance (index [0]) only if it exists.
+    host                   = kind_cluster.default[0].endpoint
+    client_certificate     = kind_cluster.default[0].client_certificate
+    client_key             = kind_cluster.default[0].client_key
+    cluster_ca_certificate = kind_cluster.default[0].cluster_ca_certificate
   }
 }
 

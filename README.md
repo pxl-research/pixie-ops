@@ -98,7 +98,9 @@ cd infrastructure/environments/development
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
+tofu apply -var="create_cluster=true" -auto-approve
 tofu apply -auto-approve
+
 
 # Only use this in another terminal if you want to inspect workflows via the browser (during development)
 ./port_forwarding.sh
@@ -126,6 +128,8 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Create a StatefulSet example of a Postgres database pod that is accessed in the FastAPI pod.
+* Might look into simpler Dockerfile (no shared) to make example simpler.
 * storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.
     * Define different tiers (fast-ssd, slow-hdd, etc.)
     * Let dynamic provisioning handle the details
@@ -136,9 +140,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
   * Choose the right reclaim policy:
     * Retain for production databases.
     * Delete for development and temporary data.
-
-* Set up cluster first and separate from the rest.
-* In production: use same port forwarding script as in local development?
+* In production: port forwarding is probably not needed?
 
 Note: only use CI/CD to build containers when pushing to main.
 Changing production should be done by manually applying Terraform/OpenTofu.

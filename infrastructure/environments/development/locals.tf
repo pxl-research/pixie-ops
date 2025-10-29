@@ -1,8 +1,8 @@
 locals {
   # Naming
   cluster_name = "pixie"
+  project_namespace_name = "pixie"
   argo_namespace_name = "argo"
-  pixie_namespace_name = "pixie"
   is_local_deployment = true
 
   # General paths
@@ -17,7 +17,7 @@ locals {
   # Packages
   argo_workflows_version = "0.45.26" # this is 3.7.2 outside of helm
 
-  # List of base images to load for Argo Workflows
+  # List of base images to pre-load for Argo Workflows
   base_images_to_load = [
     "python:3.11-alpine",
   ]
@@ -35,8 +35,8 @@ locals {
         has_probing       = true
         image_name        = "pixie-ingest"
         image_tag         = "1.0.1"
-        context           = "${local.apps_path}"
-        docker_build_path = "${local.apps_path}/ingest_server"
+        docker_context    = "${local.apps_path}"
+        dockerfile_path   = "${local.apps_path}/ingest_server"
         request_cpu       = "128m"
         request_memory    = "256Mi"
         limit_cpu         = "256m"
