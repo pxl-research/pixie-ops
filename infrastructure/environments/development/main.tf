@@ -3,6 +3,7 @@ locals {
 }
 
 module "development" {
+  k8s_base_path           = "${path.module}/../../modules/kubernetes"
   source = "../../modules/local"
   is_local_deployment     = true
 
@@ -19,7 +20,6 @@ module "development" {
   argo_workflows_version  = "0.45.26"
   ingress_version         = "4.7.1"
   ingress_host            = "localhost"
-  #k8s_base_path           = "${path.module}/../../../kubernetes"
 
   # Applications
   # ------------

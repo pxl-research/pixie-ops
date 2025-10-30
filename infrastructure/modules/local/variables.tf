@@ -61,7 +61,7 @@ variable "app_configs" {
 variable "k8s_base_path" {
   description = "The relative path to the base Kubernetes manifest templates."
   type        = string
-  default     = "./../../../kubernetes"
+  default     = "./../kubernetes"
 }
 
 variable "base_images_to_load" {
