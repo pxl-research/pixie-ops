@@ -1,16 +1,5 @@
-########################################
-# LOCALS
-########################################
-locals {
-  kube_config_path = pathexpand("~/.kube/config")
-}
-
-########################################
-# TERRAFORM SETTINGS
-########################################
 terraform {
   required_version = ">= 1.5.0"
-
   required_providers {
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -40,40 +29,10 @@ terraform {
 }
 
 ########################################
-# CLUSTER CREATION
+# LOCALS
 ########################################
-resource "kind_cluster" "default" {
-  count           = 1
-  name            = local.cluster_name
-  kubeconfig_path = local.kube_config_path
-  wait_for_ready  = true
-
-  kind_config {
-    kind        = "Cluster"
-    api_version = "kind.x-k8s.io/v1alpha4"
-
-    node {
-      role = "control-plane"
-
-      kubeadm_config_patches = [
-        "kind: InitConfiguration\nnodeRegistration:\n  kubeletExtraArgs:\n    node-labels: \"ingress-ready=true\"\n"
-      ]
-
-      # Map ingress ports only
-      extra_port_mappings {
-        container_port = 80
-        host_port      = 8080
-      }
-      extra_port_mappings {
-        container_port = 443
-        host_port      = 8443
-      }
-    }
-
-    node {
-      role = "worker"
-    }
-  }
+locals {
+  kube_config_path = pathexpand("~/.kube/config")
 }
 
 ########################################
@@ -107,7 +66,7 @@ provider "kubectl" {
 }
 
 # Null provider
-provider "null" {}
+# provider "null" {}
 
 # Docker provider
 provider "docker" {

@@ -98,7 +98,7 @@ cd infrastructure/environments/development
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
-tofu apply -var="create_cluster=true" -auto-approve
+tofu apply -var="cluster_create=true" -auto-approve
 tofu apply -auto-approve
 
 
