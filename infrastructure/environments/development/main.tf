@@ -41,9 +41,9 @@ module "development" {
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
         request_cpu     = "128m"
-        request_memory  = "256Mi"
+        request_memory  = "128Mi"
         limit_cpu       = "256m"
-        limit_memory    = "1Gi"
+        limit_memory    = "256Mi"
       }
       ingress = {
         enabled         = true
