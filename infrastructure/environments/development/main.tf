@@ -27,6 +27,16 @@ module "development" {
   base_images_to_load = [
     "python:3.11-alpine"
   ]
+
+  storage_classes = {
+    fast_storage = {
+      name = "fast-storage"
+      provisioner = "rancher.io/local-path"
+      reclaim_policy = "Delete"
+      volume_binding_mode = "Immediate"
+    }
+  }
+
   app_configs = {
     ingest_server = {
       metadata = {
@@ -45,9 +55,33 @@ module "development" {
         limit_cpu       = "256m"
         limit_memory    = "256Mi"
       }
+      /*
+      # XOR (exclusive OR): use statefulset instead of deployment:
+      statefulset = {
+        replica_count   = 1
+        has_probing     = false
+        image_name      = "pixie-db"
+        image_tag       = "1.0.0"
+        docker_context  = local.apps_path
+        dockerfile_path = "${local.apps_path}/ingest_server"
+        request_cpu     = "128m"
+        request_memory  = "128Mi"
+        limit_cpu       = "256m"
+        limit_memory    = "256Mi"
+
+        data_volumes = {
+          pgdata = {
+            name               = "pgdata"
+            mount_path         = "/var/lib/app/data"
+            storage_request    = "1Gi"
+            storage_class_name = "fast-storage"
+            access_mode        = "ReadWriteOnce"
+          }
+        }
+      }
+      */
       ingress = {
-        enabled         = true
-        path            = "/ingest"
+        path = "/ingest"
       }
     }
   }

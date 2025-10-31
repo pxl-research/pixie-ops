@@ -20,8 +20,8 @@ spec:
     metadata:
       labels:
         app: ${app_name}
-        annotations:
-          kubectl.kubernetes.io/restartedAt: ${rollout_trigger}
+      annotations:
+        kubectl.kubernetes.io/restartedAt: ${rollout_trigger}
     spec:
 %{ if is_local_deployment == false }
       imagePullSecrets:
@@ -30,15 +30,37 @@ spec:
       containers:
       - name: ${app_name}
         image: ${image_name}:${image_tag}
+        ports:
+          - containerPort: ${target_port}
+        # Resource requests and limits
+        resources:
+          requests:
+            cpu: ${request_cpu}
+            memory: ${request_memory}
+          limits:
+            cpu: ${limit_cpu}
+            memory: ${limit_memory}
+
+        # Conditional Probes (Only enabled if 'has_probing' is true)
+%{ if has_probing }
+%{ endif }
+
+        # Dynamically injects all defined volume mounts
         volumeMounts:
-        - name: data
-          mountPath: ${volume_mount_path} # /var/lib/postgresql/data
-  volumeClaimTemplates:  # Creates a PVC for each replica
+%{ for name, volume in data_volumes }
+        - name: ${volume}
+          mountPath: ${volume.mount_path}
+%{ endfor }
+
+  # Creates a PVC for each replica, based on the defined data_volumes map
+  volumeClaimTemplates:
+  %{ for name, volume in data_volumes }
   - metadata:
-      name: data
+      name: ${volume.name}
     spec:
-      storageClassName: fast-storage # <-- References the new StorageClass
-      accessModes: ["ReadWriteOnce"]
+      storageClassName: ${volume.storage_class_name}
+      accessModes: ["${volume.access_mode}"] # e.g., ReadWriteOnce
       resources:
         requests:
-          storage: 10Gi
+          storage: ${volume.storage_request} # e.g., 10Gi
+  %{ endfor }

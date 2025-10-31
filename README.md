@@ -128,7 +128,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Put everything in a reusable module, even the Kubernetes yamls.
+* Correctly pas env variables to Deployment and StatefulSet.
 * Might look into simpler Dockerfile (no shared) to make example simpler.
 * Create a StatefulSet example of a Postgres database pod that is accessed in the FastAPI pod.
 * storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.

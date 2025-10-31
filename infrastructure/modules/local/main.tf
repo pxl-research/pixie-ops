@@ -173,7 +173,25 @@ resource "null_resource" "rollout_trigger" {
   depends_on = [null_resource.kind_image_load_app]
 }
 
-# 4a. Create Kubernetes Deployment for each app using for_each
+# 4a. Create Kubernetes StorageClass list
+resource "kubectl_manifest" "storage_classes" {
+  # Only execute when cluster_create is false
+  for_each = var.cluster_create ? {} : var.storage_classes
+
+  yaml_body = templatefile("${var.k8s_base_path}/storageclass.yaml", {
+    name = each.value.name
+    provisioner = each.value.provisioner
+    reclaim_policy = each.value.reclaim_policy
+    volume_binding_mode = each.value.volume_binding_mode
+  })
+
+  depends_on = [
+    null_resource.kind_image_load_app,
+    null_resource.rollout_trigger
+  ]
+}
+
+# 4b. Create Kubernetes Deployment for each app using for_each
 resource "kubectl_manifest" "app_deployment" {
   # Filter the map to only include apps that have a deployment config AND cluster_create is false
   for_each = {
@@ -182,31 +200,66 @@ resource "kubectl_manifest" "app_deployment" {
     }
 
   yaml_body = templatefile("${var.k8s_base_path}/deployment.yaml", {
-    app_name            = each.value.metadata.app_name
-    namespace_name      = var.project_namespace_name
-    is_local_deployment = var.is_local_deployment
-    target_port         = each.value.metadata.target_port
-    image_name          = each.value.deployment.image_name
-    image_tag           = each.value.deployment.image_tag
-    rollout_trigger     = null_resource.rollout_trigger[each.key].triggers.timestamp
+    app_name               = each.value.metadata.app_name
+    namespace_name         = var.project_namespace_name
+    is_local_deployment    = var.is_local_deployment
+    target_port            = each.value.metadata.target_port
+    image_name             = each.value.deployment.image_name
+    image_tag              = each.value.deployment.image_tag
+    rollout_trigger        = null_resource.rollout_trigger[each.key].triggers.timestamp
     image_pull_secret_name = ""
-    replica_count       = each.value.deployment.replica_count
-    has_probing         = each.value.deployment.has_probing
-    request_cpu         = each.value.deployment.request_cpu
-    request_memory      = each.value.deployment.request_memory
-    limit_cpu           = each.value.deployment.limit_cpu
-    limit_memory        = each.value.deployment.limit_memory
+    replica_count          = each.value.deployment.replica_count
+    has_probing            = each.value.deployment.has_probing
+    request_cpu            = each.value.deployment.request_cpu
+    request_memory         = each.value.deployment.request_memory
+    limit_cpu              = each.value.deployment.limit_cpu
+    limit_memory           = each.value.deployment.limit_memory
   })
 
   wait = false
 
   depends_on = [
     null_resource.kind_image_load_app,
-    null_resource.rollout_trigger
+    null_resource.rollout_trigger,
+    kubectl_manifest.storage_classes
   ]
 }
 
-// TODO: # 4b. Create Kubernetes StatefulSet for each app using for_each
+# 4c. Create Kubernetes StatefulSet for each app using for_each
+resource "kubectl_manifest" "app_statefulset" {
+  # Filter the map to only include apps that have a statefulset config AND cluster_create is false
+  for_each = {
+    for k, v in var.app_configs : k => v
+    if !var.cluster_create && try(v.statefulset, null) != null
+  }
+
+  yaml_body = templatefile("${var.k8s_base_path}/statefulset.yaml", {
+    app_name               = each.value.metadata.app_name
+    namespace_name         = var.project_namespace_name
+    is_local_deployment    = var.is_local_deployment
+    target_port            = each.value.metadata.target_port
+    image_name             = each.value.statefulset.image_name
+    image_tag              = each.value.statefulset.image_tag
+    rollout_trigger        = null_resource.rollout_trigger[each.key].triggers.timestamp
+    image_pull_secret_name = ""
+    replica_count          = each.value.statefulset.replica_count
+    has_probing            = each.value.statefulset.has_probing
+    request_cpu            = each.value.statefulset.request_cpu
+    request_memory         = each.value.statefulset.request_memory
+    limit_cpu              = each.value.statefulset.limit_cpu
+    limit_memory           = each.value.statefulset.limit_memory
+
+    data_volumes           = each.value.statefulset.data_volumes
+  })
+
+  wait = false
+
+  depends_on = [
+    null_resource.kind_image_load_app,
+    null_resource.rollout_trigger,
+    kubectl_manifest.storage_classes
+  ]
+}
 
 # 5. Create Kubernetes Service for each app using for_each
 resource "kubectl_manifest" "app_service" {
@@ -214,20 +267,19 @@ resource "kubectl_manifest" "app_service" {
   for_each = var.cluster_create ? {} : var.app_configs
 
   yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
-    app_name          = each.value.metadata.app_name
-    namespace_name    = var.project_namespace_name
+    app_name            = each.value.metadata.app_name
+    namespace_name      = var.project_namespace_name
     is_local_deployment = var.is_local_deployment
-    target_port       = each.value.metadata.target_port
+    target_port         = each.value.metadata.target_port
   })
-  depends_on = [kubectl_manifest.app_deployment]
+  depends_on = [kubectl_manifest.app_deployment, kubectl_manifest.app_statefulset]
 }
 
 # 6. Create Kubernetes Ingress for each app that has ingress enabled
 resource "kubectl_manifest" "app_ingress" {
-  # Filter the map to only include apps where ingress is enabled AND cluster_create is false
   for_each = {
     for k, v in var.app_configs : k => v
-    if !var.cluster_create && v.ingress.enabled
+    if !var.cluster_create && v.ingress != null
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/ingress.yaml", {

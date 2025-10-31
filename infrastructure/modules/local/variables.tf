@@ -28,13 +28,26 @@ variable "ingress_namespace_name" {
   default     = "ingress-nginx"
 }
 
+variable "storage_classes" {
+  description = "A map of storage class configurations, where the map keys are local references and the values define the properties of the StorageClass object."
+  type = map(object({
+    name                = string
+    provisioner         = string
+    reclaim_policy      = string
+    volume_binding_mode = string
+  }))
+  default = {}
+}
+
 variable "app_configs" {
   description = "A map containing configuration details for dynamic application deployment (Docker, k8s manifest values)."
   type = map(object({
+
     metadata = object({
       app_name    = string
       target_port = number
     })
+
     deployment = optional(object({
       replica_count      = number
       has_probing        = bool
@@ -46,13 +59,34 @@ variable "app_configs" {
       request_memory     = string
       limit_cpu          = string
       limit_memory       = string
-    }), null) # Use optional to handle apps without a deployment block
-    ingress = object({
-      enabled = bool
-      path    = string
-    })
+    }), null)
+
+    statefulset = optional(object({
+      replica_count    = number
+      has_probing      = bool
+      image_name       = string
+      image_tag        = string
+      docker_context   = string
+      dockerfile_path  = string
+      request_cpu      = string
+      request_memory   = string
+      limit_cpu        = string
+      limit_memory     = string
+      data_volumes = map(object({
+        name               = string
+        mount_path         = string
+        storage_request    = string
+        storage_class_name = string
+        access_mode        = string
+      }))
+    }), null)
+
     service = optional(object({
       type = string
+    }), null)
+
+    ingress = optional(object({
+      path = string
     }), null)
   }))
   default = {}
