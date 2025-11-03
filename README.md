@@ -130,9 +130,8 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 
 ## TODO list:
 * Healthcheck for StatefulSet based on: https://github.com/pxl-research/pixie-tabular-db/blob/main/infra/docker/docker-compose.dev.yml
-* Check if correctly passed env variables to StatefulSet via example.
-* Might look into simpler Dockerfile (no shared) to make example simpler.
 * Create a StatefulSet example of a Postgres database pod that is accessed in the FastAPI pod.
+* Might look into simpler Dockerfile (no shared) to make example simpler.
 * storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.
     * Define different tiers (fast-ssd, slow-hdd, etc.)
     * Let dynamic provisioning handle the details

@@ -59,7 +59,7 @@ variable "app_configs" {
       request_memory     = string
       limit_cpu          = string
       limit_memory       = string
-      env_file_name      = optional(string, null)
+      env_file           = optional(string, null)
     }), null)
 
     statefulset = optional(object({
@@ -73,7 +73,7 @@ variable "app_configs" {
       request_memory   = string
       limit_cpu        = string
       limit_memory     = string
-      env_file_name    = optional(string, null)
+      env_file         = optional(string, null)
       data_volumes = map(object({
         name               = string
         mount_path         = string

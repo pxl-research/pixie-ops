@@ -60,7 +60,7 @@ class HelloFlow(HeraWorkflow):
         # Wait for completion
         final_workflow = service.wait_for_workflow(name=name, namespace=namespace)
         status = final_workflow.status.phase
-        
+
         # Optionally, cleanup
         # service.delete_workflow(name=name, namespace=namespace)
         '''
