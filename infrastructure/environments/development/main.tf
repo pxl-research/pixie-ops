@@ -54,7 +54,7 @@ module "development" {
         request_memory  = "128Mi"
         limit_cpu       = "256m"
         limit_memory    = "256Mi"
-        restart         = "Always"
+        restart         = "Always" # Always (default), OnFailure, Never
         env_file        = ".env" # Path starting relatively from Dockerfile path
       }
       /*
