@@ -30,6 +30,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/restartedAt: ${rollout_trigger}
     spec:
+      restartPolicy: ${restart}
 %{ if is_local_deployment == false }
       imagePullSecrets:
         - name: ${image_pull_secret_name}

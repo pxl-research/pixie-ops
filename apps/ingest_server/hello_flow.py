@@ -7,7 +7,7 @@ load_dotenv()
 
 ARGO_WORKFLOWS_SERVER = os.getenv("ARGO_WORKFLOWS_SERVER")
 
-# TODO: minikube image load python:3.11-alpine in Terraform
+# NOTE: make sure to preload images
 @script(image="python:3.11-alpine", image_pull_policy="IfNotPresent", resource_requests={"cpu": "50m", "memory": "64Mi"})
 def echo(message: str):
     """Simple Hera script that prints a message."""

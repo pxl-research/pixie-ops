@@ -59,6 +59,7 @@ variable "app_configs" {
       request_memory     = string
       limit_cpu          = string
       limit_memory       = string
+      restart            = optional(string, "Always")
       env_file           = optional(string, null)
     }), null)
 
@@ -73,6 +74,7 @@ variable "app_configs" {
       request_memory   = string
       limit_cpu        = string
       limit_memory     = string
+      restart          = optional(string, "Always")
       env_file         = optional(string, null)
       data_volumes = map(object({
         name               = string

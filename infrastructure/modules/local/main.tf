@@ -214,6 +214,7 @@ resource "kubectl_manifest" "app_deployment" {
     request_memory         = each.value.deployment.request_memory
     limit_cpu              = each.value.deployment.limit_cpu
     limit_memory           = each.value.deployment.limit_memory
+    restart                = each.value.deployment.restart
     app_env                = try(
       each.value.deployment.env_file != null ?
         {
@@ -260,6 +261,7 @@ resource "kubectl_manifest" "app_statefulset" {
     limit_cpu              = each.value.statefulset.limit_cpu
     limit_memory           = each.value.statefulset.limit_memory
     data_volumes           = each.value.statefulset.data_volumes
+    restart                = each.value.statefulset.restart
     app_env                = try(
       each.value.statefulset.env_file != null ?
         {
