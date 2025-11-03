@@ -98,8 +98,9 @@ cd infrastructure/environments/development
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
-tofu apply -var="cluster_create=true" -auto-approve
-tofu apply -auto-approve
+tofu apply -var="cluster_create=true" -auto-approve # first only create the cluster
+# wait +- 2 minutes
+tofu apply -auto-approve # then create the resources on the cluster
 
 
 # Only use this in another terminal if you want to inspect workflows via the browser (during development)
@@ -128,7 +129,8 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Correctly pas env variables to Deployment and StatefulSet.
+* Healthcheck for StatefulSet based on: https://github.com/pxl-research/pixie-tabular-db/blob/main/infra/docker/docker-compose.dev.yml
+* Check if correctly passed env variables to StatefulSet via example.
 * Might look into simpler Dockerfile (no shared) to make example simpler.
 * Create a StatefulSet example of a Postgres database pod that is accessed in the FastAPI pod.
 * storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.

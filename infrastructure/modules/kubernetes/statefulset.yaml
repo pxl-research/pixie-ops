@@ -28,8 +28,15 @@ spec:
         - name: ${image_pull_secret_name}
 %{ endif }
       containers:
-      - name: ${app_name}
-        image: ${image_name}:${image_tag}
+        - name: ${app_name}
+          image: ${image_name}:${image_tag}
+%{ if length(app_env) > 0 }
+        env:
+%{ for key, value in app_env ~}
+          - name: ${key}
+            value: "${value}"
+%{ endfor ~}
+%{ endif }
         ports:
           - containerPort: ${target_port}
         # Resource requests and limits

@@ -54,6 +54,7 @@ module "development" {
         request_memory  = "128Mi"
         limit_cpu       = "256m"
         limit_memory    = "256Mi"
+        env_file_path   = ".env" # Path starting from Dockerfile path
       }
       /*
       # XOR (exclusive OR): use statefulset instead of deployment:

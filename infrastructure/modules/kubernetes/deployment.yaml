@@ -37,6 +37,13 @@ spec:
       containers:
         - name: ${app_name}
           image: ${image_name}:${image_tag}
+%{ if length(app_env) > 0 }
+        env:
+%{ for key, value in app_env ~}
+          - name: ${key}
+            value: "${value}"
+%{ endfor ~}
+%{ endif ~}
 %{ if is_local_deployment == true }
           imagePullPolicy: Never
 %{ else }
