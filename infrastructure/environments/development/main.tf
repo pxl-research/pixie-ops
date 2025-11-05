@@ -56,6 +56,10 @@ module "development" {
         limit_memory    = "256Mi"
         restart         = "Always" # Always (default), OnFailure, Never
         env_file        = ".env" # Path starting relatively from Dockerfile path
+        # environment = {
+        #   X=""
+        #   Y=""
+        # }
         depends_on      = []
       }
       /*

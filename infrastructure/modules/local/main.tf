@@ -215,16 +215,22 @@ resource "kubectl_manifest" "app_deployment" {
     limit_cpu              = each.value.deployment.limit_cpu
     limit_memory           = each.value.deployment.limit_memory
     restart                = each.value.deployment.restart
-    app_env                = try(
-      each.value.deployment.env_file != null ?
-        {
-          for line in split("\n", file("${each.value.deployment.dockerfile_path}/${each.value.deployment.env_file}")) :
-          # Split on the first '=' to handle values with multiple '='
-          trimspace(split("=", line, 2)[0]) => trim(split("=", line, 2)[1], "\" ")
-          if length(split("=", line, 2)) == 2 # Only process lines with exactly one '='
-        }
-        : {}
-      , {}
+    app_env = merge(
+      # Merge .env file contents and explicit 'environment' map
+      try(
+        # Map from env_file
+        each.value.deployment.env_file != null ?
+          {
+            for line in split("\n", file("${each.value.deployment.dockerfile_path}/${each.value.deployment.env_file}")) :
+            # Split on the first '=' to handle values with multiple '='
+            trimspace(split("=", line, 2)[0]) => trim(split("=", line, 2)[1], "\" ")
+            if length(split("=", line, 2)) == 2 # Only process lines with exactly one '='
+          }
+          : {}
+        , {}
+      ),
+      # Explicit map from environment
+      try(each.value.deployment.environment, {})
     )
     depends_on = try(each.value.deployment.depends_on, [])
   })
@@ -263,16 +269,22 @@ resource "kubectl_manifest" "app_statefulset" {
     limit_memory           = each.value.statefulset.limit_memory
     data_volumes           = each.value.statefulset.data_volumes
     restart                = each.value.statefulset.restart
-    app_env                = try(
-      each.value.statefulset.env_file != null ?
-        {
-          for line in split("\n", file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")) :
-          # Split on the first '=' to handle values with multiple '='
-          trimspace(split("=", line, 2)[0]) => trim(split("=", line, 2)[1], "\" ")
-          if length(split("=", line, 2)) == 2 # Only process lines with exactly one '='
-        }
-        : {}
-      , {}
+    app_env = merge(
+      # Merge .env file contents and explicit 'environment' map
+      try(
+        # Map from env_file
+        each.value.statefulset.env_file != null ?
+          {
+            for line in split("\n", file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")) :
+            # Split on the first '=' to handle values with multiple '='
+            trimspace(split("=", line, 2)[0]) => trim(split("=", line, 2)[1], "\" ")
+            if length(split("=", line, 2)) == 2 # Only process lines with exactly one '='
+          }
+          : {}
+        , {}
+      ),
+      # Explicit map from environment
+      try(each.value.statefulset.environment, {})
     )
     depends_on = try(each.value.statefulset.depends_on, [])
   })
