@@ -28,6 +28,19 @@ spec:
       imagePullSecrets:
         - name: ${image_pull_secret_name}
 %{ endif }
+%{ if length(depends_on) > 0 }
+      initContainers:
+%{ for dep_app_name in depends_on ~}
+        - name: wait-for-${dep_app_name}
+          image: busybox:1.36
+%{ if is_local_deployment == true }
+          imagePullPolicy: Never
+%{ else }
+          imagePullPolicy: Always
+%{ endif }
+          command: ['sh', '-c', 'until wget -qO- ${dep_app_name}.${namespace_name}.svc.cluster.local > /dev/null; do echo "Waiting for ${dep_app_name} service..."; sleep 5; done']
+%{ endfor ~}
+%{ endif ~}
       containers:
         - name: ${app_name}
           image: ${image_name}:${image_tag}

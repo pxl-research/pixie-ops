@@ -226,6 +226,7 @@ resource "kubectl_manifest" "app_deployment" {
         : {}
       , {}
     )
+    depends_on = try(each.value.deployment.depends_on, [])
   })
 
   wait = false
@@ -273,6 +274,7 @@ resource "kubectl_manifest" "app_statefulset" {
         : {}
       , {}
     )
+    depends_on = try(each.value.statefulset.depends_on, [])
   })
 
   wait = false

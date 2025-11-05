@@ -56,6 +56,7 @@ module "development" {
         limit_memory    = "256Mi"
         restart         = "Always" # Always (default), OnFailure, Never
         env_file        = ".env" # Path starting relatively from Dockerfile path
+        depends_on      = []
       }
       /*
       # XOR (exclusive OR): use statefulset instead of deployment:

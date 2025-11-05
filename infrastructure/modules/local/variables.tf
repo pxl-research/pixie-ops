@@ -61,6 +61,7 @@ variable "app_configs" {
       limit_memory       = string
       restart            = optional(string, "Always")
       env_file           = optional(string, null)
+      depends_on         = optional(list(string), [])
     }), null)
 
     statefulset = optional(object({
@@ -76,6 +77,7 @@ variable "app_configs" {
       limit_memory     = string
       restart          = optional(string, "Always")
       env_file         = optional(string, null)
+      depends_on       = optional(list(string), [])
       data_volumes = map(object({
         name               = string
         mount_path         = string
