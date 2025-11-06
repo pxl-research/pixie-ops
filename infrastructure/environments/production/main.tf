@@ -178,10 +178,24 @@ resource "kubectl_manifest" "ingest_server_service" {
   depends_on = [kubectl_manifest.ingest_server_deployment]
 }
 
+# Ingress Manifest (NEW)
+resource "kubectl_manifest" "ingest_server_ingress" {
+  yaml_body = templatefile("${local.k8s_base_path}/ingress.yaml", {
+    app_name = local.ingest_server_app_name
+    namespace_name = kubernetes_namespace.pixie_namespace.metadata[0].name
+    # Use your production FQDN. This FQDN must point to the AKS Ingress Controller's IP.
+    ingress_host = local.ingress_host
+  })
+  depends_on = [
+    kubectl_manifest.ingest_server_service,
+    # Add dependency on the Helm release for the Ingress Controller if managed by Terraform
+  ]
+}
+
 # For Hera scripts:
 # Minikube image load is replaced with a simple null_resource dependency
 resource "null_resource" "hera_echo_base_image_dependency" {
   # This resource now only serves as a dependency anchor, 
   # assuming 'python:3.11-alpine' is available from Docker Hub or a configured repository.
-  depends_on = [kubectl_manifest.ingest_server_service]
+  depends_on = [kubectl_manifest.ingest_server_ingress]
 }

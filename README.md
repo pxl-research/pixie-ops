@@ -1,4 +1,7 @@
 # TODO: write decent readme
+This is an attempt to create a simple DevOps/MLOps framework to quickly deploy cloud native applications on Kubernetes.
+Please ignore everything below currently!
+
 ## Installation on Ubuntu (native or WSL2 on Windows):
 The following dependencies are needed:
 * Docker:
@@ -48,15 +51,20 @@ sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 
 # Verify if GPU support works:
-docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi 
+docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi
 ```
 
-* minikube
-    * export KUBE_CONFIG_PATH="~/.kube/config"
-    * 
-    ```
-    TODO
-    ```
+* kind:
+```
+# Linux
+[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-linux-amd64
+# For M1 / ARM Macs
+[ $(uname -m) = arm64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-darwin-arm64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+
+```
+
 
 * kubectl
     ```
@@ -87,19 +95,19 @@ TODO
 ## Development: local deployment on minikube
 ```
 cd infrastructure/environments/development
-minikube start --cpus 2 --memory 2048mb --driver docker --container-runtime docker --gpus all
-minikube update-context
-kubectl config current-context # make sure minikube is current context
-
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
-tofu apply -auto-approve
-./port-forwarding.sh
+tofu apply -var="cluster_create=true" -auto-approve # first only create the cluster
+# wait +- 2 minutes
+tofu apply -auto-approve # then create the resources on the cluster
 
-# In other terminal:
-curl http://$(minikube ip):30080/; echo
-curl -X POST http://$(minikube ip):30080/trigger; echo
+
+# Only use this in another terminal if you want to inspect workflows via the browser (during development)
+./port_forwarding.sh
+
+curl http://localhost:8080/ingest; echo
+curl -X POST http://localhost:8080/ingest/trigger; echo
 ```
 
 ## Production: Azure Deployment on AKS
@@ -121,6 +129,20 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* In production: use same port forwarding script as in local development?
-* In production: use an Ingress Controller instead of a Load Balancer directly in the service.yaml!
-* Health check only needed for limited time.
+* Healthcheck for StatefulSet based on: https://github.com/pxl-research/pixie-tabular-db/blob/main/infra/docker/docker-compose.dev.yml
+* Create a StatefulSet example of a Postgres database pod that is accessed in the FastAPI pod.
+* Might look into simpler Dockerfile (no shared) to make example simpler.
+* storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.
+    * Define different tiers (fast-ssd, slow-hdd, etc.)
+    * Let dynamic provisioning handle the details
+* statefulset.yaml: Use StatefulSet with PersistentVolumeClaims defined in it. PVCs can be expanded but not shrunk, thus request only what you need.
+  * Database Storage: Use StatefulSet with RWO PVCs. Each replica gets its own storage.
+  * Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
+  * Scratch Space: Use emptyDir for temporary data processing that doesn't need persistence; survives pod restart but not pod deletion.
+  * Choose the right reclaim policy:
+    * Retain for production databases.
+    * Delete for development and temporary data.
+* In production: port forwarding is probably not needed?
+
+Note: only use CI/CD to build containers when pushing to main.
+Changing production should be done by manually applying Terraform/OpenTofu.

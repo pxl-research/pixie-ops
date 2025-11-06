@@ -1,0 +1,107 @@
+# Deployment: for stateless applications
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${app_name}
+  namespace: ${namespace_name}
+  labels:
+    app: ${app_name}
+# spec is the desired state which gets reconciled by controller.
+# If there are too few Pods, it creates more.
+# If there are too many, it removes extras.
+# If Pods are unhealthy, it replaces them.
+spec:
+  replicas: ${replica_count}
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 1200
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels: # so service.yaml matches this deployment.yaml
+      app: ${app_name}
+  template:
+    metadata:
+      labels:
+        app: ${app_name}
+      annotations:
+        kubectl.kubernetes.io/restartedAt: ${rollout_trigger}
+    spec:
+      restartPolicy: ${restart}
+%{ if is_local_deployment == false }
+      imagePullSecrets:
+        - name: ${image_pull_secret_name}
+%{ endif }
+%{ if length(depends_on) > 0 }
+      initContainers:
+%{ for dep_app_name in depends_on ~}
+        - name: wait-for-${dep_app_name}
+          image: busybox:1.36
+%{ if is_local_deployment == true }
+          imagePullPolicy: Never
+%{ else }
+          imagePullPolicy: Always
+%{ endif }
+          command: ['sh', '-c', 'until wget -qO- ${dep_app_name}.${namespace_name}.svc.cluster.local > /dev/null; do echo "Waiting for ${dep_app_name} service..."; sleep 5; done']
+%{ endfor ~}
+%{ endif ~}
+      containers:
+        - name: ${app_name}
+          image: ${image_name}:${image_tag}
+%{ if length(app_env) > 0 }
+        env:
+%{ for key, value in app_env ~}
+          - name: ${key}
+            value: "${value}"
+%{ endfor ~}
+%{ endif ~}
+%{ if is_local_deployment == true }
+          imagePullPolicy: Never
+%{ else }
+          imagePullPolicy: Always
+%{ endif }
+          ports:
+            - containerPort: ${target_port}
+
+%{ if liveness_probe_config.path != null || liveness_probe_config.command != null }
+          livenessProbe:
+%{ if liveness_probe_config.path != null } # HTTP GET Probe
+            httpGet:
+              path: ${liveness_probe_config.path}
+              port: ${target_port}
+%{ else } # EXEC Command Probe
+            exec:
+              command: ${jsonencode(liveness_probe_config.command)}
+%{ endif }
+            initialDelaySeconds: ${liveness_probe_config.initial_delay_seconds}
+            periodSeconds: ${liveness_probe_config.period_seconds}
+            timeoutSeconds: ${liveness_probe_config.timeout_seconds}
+            failureThreshold: ${liveness_probe_config.failure_threshold}
+%{ endif }
+
+%{ if readiness_probe_config.path != null || readiness_probe_config.command != null }
+          readinessProbe:
+%{ if readiness_probe_config.path != null } # HTTP GET Probe
+            httpGet:
+              path: ${readiness_probe_config.path}
+              port: ${target_port}
+%{ else } # EXEC Command Probe
+            exec:
+              command: ${jsonencode(readiness_probe_config.command)}
+%{ endif }
+            initialDelaySeconds: ${readiness_probe_config.initial_delay_seconds}
+            periodSeconds: ${readiness_probe_config.period_seconds}
+            timeoutSeconds: ${readiness_probe_config.timeout_seconds}
+            successThreshold: ${readiness_probe_config.success_threshold}
+            failureThreshold: ${readiness_probe_config.failure_threshold}
+%{ endif }
+          resources:
+            requests:
+              cpu: ${request_cpu} # e.g. "128m"
+              memory: ${request_memory} # e.g. "256Mi"
+            limits:
+              cpu: ${limit_cpu} # e.g. "256m"
+              memory: ${limit_memory} # e.g. "1Gi"

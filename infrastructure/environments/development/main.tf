@@ -1,109 +1,116 @@
-resource "kubernetes_namespace" "argo_namespace" {
-  metadata {
-    name = local.argo_namespace_name
-  }
+locals {
+  apps_path = "${path.module}/../../../apps"
 }
 
-resource "kubernetes_namespace" "pixie_namespace" {
-  metadata {
-    name = local.pixie_namespace_name
-  }
-}
+module "development" {
+  k8s_base_path           = "${path.module}/../../modules/kubernetes"
+  source = "../../modules/local"
+  is_local_deployment     = true
 
-resource "helm_release" "argo_workflows" {
-  name       = "argo-workflows"
-  repository = "https://argoproj.github.io/argo-helm"
-  chart      = "argo-workflows"
-  version    = "${local.argo_workflows_version}"
-  namespace  = kubernetes_namespace.argo_namespace.metadata.0.name
-  values = [
-    file("${local.k8s_base_path}/argo-workflows-values.yaml")
+  # Build argument
+  # --------------
+  cluster_create          = var.cluster_create
+
+  # Main configuration
+  # ------------------
+  cluster_name            = "pixie"
+  project_namespace_name  = "pixie"
+  argo_namespace_name     = "argo"
+  ingress_namespace_name  = "ingress-nginx"
+  argo_workflows_version  = "0.45.26"
+  ingress_version         = "4.7.1"
+  ingress_host            = "localhost"
+
+  # Applications
+  # ------------
+  # Preload base images for Argo Workflows
+  base_images_to_load = [
+    "python:3.11-alpine"
   ]
-  depends_on = [
-    kubernetes_namespace.argo_namespace
-  ]
-}
 
-resource "kubectl_manifest" "hera_rbac" {
-  for_each = {
-    serviceaccount = "${local.k8s_base_path}/hera-submitter-sa.yaml"
-    clusterrole    = "${local.k8s_base_path}/hera-submitter-role.yaml"
-    binding_hera   = "${local.k8s_base_path}/hera-submitter-binding.yaml"
-    binding_default = "${local.k8s_base_path}/argo-default-task-binding.yaml"
-  }
-
-  yaml_body = file(each.value)
-
-  depends_on = [
-    helm_release.argo_workflows,
-    kubernetes_namespace.argo_namespace
-  ]
-}
-
-# ------------------------------------------------------------------------------
-# App: Ingest Server
-# ------------------------------------------------------------------------------
-
-# Build Docker image locally
-resource "docker_image" "ingest_server" {
-  name = "${local.ingest_server_image_name}:${local.ingest_server_image_tag}"
-  build {
-    context    = local.apps_path
-    dockerfile = "${local.ingest_server_app_path}/Dockerfile"
-    build_args = {
-      ARGO_WORKFLOWS_SERVER = local.argo_workflows_server
+  storage_classes = {
+    fast_storage = {
+      name = "fast-storage"
+      provisioner = "rancher.io/local-path"
+      reclaim_policy = "Delete"
+      volume_binding_mode = "Immediate"
     }
   }
-  depends_on = [kubectl_manifest.hera_rbac]
-}
 
-# Load image into Minikube
-resource "null_resource" "minikube_image_load" {
-  provisioner "local-exec" {
-    command = "minikube image load ${docker_image.ingest_server.name}"
+  app_configs = {
+    ingest_server = {
+      metadata = {
+        app_name        = "pixie-ingest"
+        target_port     = 8000
+      }
+      deployment = {
+        replica_count   = 1
+        has_probing     = true
+        image_name      = "pixie-ingest"
+        image_tag       = "1.0.1"
+        docker_context  = local.apps_path
+        dockerfile_path = "${local.apps_path}/ingest_server"
+        request_cpu     = "128m"
+        request_memory  = "128Mi"
+        limit_cpu       = "256m"
+        limit_memory    = "256Mi"
+        restart         = "Always" # Always (default), OnFailure, Never
+        env_file        = ".env" # Path starting relatively from Dockerfile path
+        # environment = {
+        #   X=""
+        #   Y=""
+        # }
+        depends_on      = []
+        # NOTE: Probes are run from the container, not externally and thus not via ingress!!!
+        # So we use INTERNAL port number and internal path.
+        liveness_probe = {
+          # Using an exec command similar to Docker Compose healthcheck 'test'
+          command               = ["sh", "-c", "wget -q -O /dev/null http://localhost:${8000}/livez || exit 1"]
+          # path                  = "/livez" # or we can use the path
+          initial_delay_seconds = 60
+          period_seconds        = 1200
+          timeout_seconds       = 3
+          failure_threshold     = 3
+        }
+        readiness_probe = {
+          # Readiness continues to use the HTTP GET path
+          path                  = "/readyz"
+          initial_delay_seconds = 30
+          period_seconds        = 300
+          timeout_seconds       = 3 # Adding default timeout
+          success_threshold     = 3
+          failure_threshold     = 2
+        }
+      }
+      /*
+      # XOR (exclusive OR): use statefulset instead of deployment:
+      statefulset = {
+        replica_count   = 1
+        has_probing     = false
+        image_name      = "pixie-db"
+        image_tag       = "1.0.0"
+        docker_context  = local.apps_path
+        dockerfile_path = "${local.apps_path}/ingest_server"
+        request_cpu     = "128m"
+        request_memory  = "128Mi"
+        limit_cpu       = "256m"
+        limit_memory    = "256Mi"
+        restart         = "Always"
+        env_file        = ".env" # Path starting relatively from Dockerfile path
+        data_volumes = {
+          pgdata = {
+            name               = "pgdata"
+            mount_path         = "/var/lib/app/data"
+            storage_request    = "1Gi"
+            storage_class_name = "fast-storage"
+            access_mode        = "ReadWriteOnce"
+          }
+        }
+      }
+      */
+      ingress = {
+        path = "/ingest"
+      }
+    }
   }
-  depends_on = [docker_image.ingest_server]
-}
-
-# Trigger-based null_resource to capture the time of the load
-# This is a good proxy for an image change identifier
-resource "null_resource" "rollout_trigger" {
-  triggers = {
-    # This value changes every time the minikube_image_load completes
-    timestamp = timestamp()
-  }
-  depends_on = [null_resource.minikube_image_load]
-}
-
-# Deployment Manifest
-resource "kubectl_manifest" "ingest_server_deployment" {
-  yaml_body = templatefile("${local.ingest_server_k8s_path}/deployment.yaml", {
-    app_name = local.ingest_server_app_name
-    namespace_name = local.pixie_namespace_name
-    image_name = local.ingest_server_image_name
-    image_tag = local.ingest_server_image_tag
-    rollout_trigger = null_resource.rollout_trigger.triggers.timestamp
-    is_local_deployment = true
-    image_pull_secret_name = "" # not used for local deployment, but needed for compilation
-  })
-  wait = false
-  depends_on = [null_resource.minikube_image_load, null_resource.rollout_trigger]
-}
-
-# Service Manifest
-resource "kubectl_manifest" "ingest_server_service" {
-  yaml_body = templatefile("${local.ingest_server_k8s_path}/service.yaml", {
-    app_name = local.ingest_server_app_name
-    namespace_name = local.pixie_namespace_name
-    is_local_deployment = true
-  })
-  depends_on = [kubectl_manifest.ingest_server_deployment]
-}
-
-# For Hera scripts:
-resource "null_resource" "minikube_image_load_hera_echo_base_image" {
-  provisioner "local-exec" {
-    command = "minikube image load python:3.11-alpine"
-  }
-  depends_on = [kubectl_manifest.ingest_server_service]
 }
