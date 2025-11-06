@@ -50,7 +50,6 @@ variable "app_configs" {
 
     deployment = optional(object({
       replica_count      = number
-      has_probing        = bool
       image_name         = string
       image_tag          = string
       docker_context     = string
@@ -63,11 +62,27 @@ variable "app_configs" {
       env_file           = optional(string, null)
       environment        = optional(map(string), {})
       depends_on         = optional(list(string), [])
+      liveness_probe = optional(object({
+        path                  = optional(string, null)       # for httpGet
+        command               = optional(list(string), null) # for exec (e.g., ["sh", "-c", "curl -f http://localhost:8000/livez || exit 1"])
+        initial_delay_seconds = optional(number, 60)
+        period_seconds        = optional(number, 1200)
+        timeout_seconds       = optional(number, 3)
+        failure_threshold     = optional(number, 3)
+      }), null)
+      readiness_probe = optional(object({
+        path                  = optional(string, null)       # for httpGet
+        command               = optional(list(string), null) # for exec
+        initial_delay_seconds = optional(number, 30)
+        period_seconds        = optional(number, 300)
+        timeout_seconds       = optional(number, 3)
+        success_threshold     = optional(number, 3)
+        failure_threshold     = optional(number, 2)
+      }), null)
     }), null)
 
     statefulset = optional(object({
       replica_count    = number
-      has_probing      = bool
       image_name       = string
       image_tag        = string
       docker_context   = string
@@ -80,6 +95,23 @@ variable "app_configs" {
       env_file         = optional(string, null)
       environment      = optional(map(string), {})
       depends_on       = optional(list(string), [])
+      liveness_probe = optional(object({
+        path                  = optional(string, null)       # for httpGet
+        command               = optional(list(string), null) # for exec (e.g., ["sh", "-c", "curl -f http://localhost:8000/livez || exit 1"])
+        initial_delay_seconds = optional(number, 60)
+        period_seconds        = optional(number, 1200)
+        timeout_seconds       = optional(number, 3)
+        failure_threshold     = optional(number, 3)
+      }), null)
+      readiness_probe = optional(object({
+        path                  = optional(string, null)       # for httpGet
+        command               = optional(list(string), null) # for exec
+        initial_delay_seconds = optional(number, 30)
+        period_seconds        = optional(number, 300)
+        timeout_seconds       = optional(number, 3)
+        success_threshold     = optional(number, 3)
+        failure_threshold     = optional(number, 2)
+      }), null)
       data_volumes = map(object({
         name               = string
         mount_path         = string

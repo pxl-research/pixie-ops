@@ -65,23 +65,38 @@ spec:
 %{ endif }
           ports:
             - containerPort: ${target_port}
-%{ if has_probing == true }
+
+%{ if liveness_probe_config.path != null || liveness_probe_config.command != null }
           livenessProbe:
+%{ if liveness_probe_config.path != null } # HTTP GET Probe
             httpGet:
-              path: /livez
+              path: ${liveness_probe_config.path}
               port: ${target_port}
-            initialDelaySeconds: 60
-            periodSeconds: 1200 # how often to probe in seconds
-            timeoutSeconds: 3 # how many seconds can request be
-            failureThreshold: 3 # consecutive failures before action
+%{ else } # EXEC Command Probe
+            exec:
+              command: ${jsonencode(liveness_probe_config.command)}
+%{ endif }
+            initialDelaySeconds: ${liveness_probe_config.initial_delay_seconds}
+            periodSeconds: ${liveness_probe_config.period_seconds}
+            timeoutSeconds: ${liveness_probe_config.timeout_seconds}
+            failureThreshold: ${liveness_probe_config.failure_threshold}
+%{ endif }
+
+%{ if readiness_probe_config.path != null || readiness_probe_config.command != null }
           readinessProbe:
+%{ if readiness_probe_config.path != null } # HTTP GET Probe
             httpGet:
-              path: /readyz
+              path: ${readiness_probe_config.path}
               port: ${target_port}
-            initialDelaySeconds: 30
-            periodSeconds: 300 # how often to probe in seconds
-            successThreshold: 3 # must succeed 3 times
-            failureThreshold: 2 # consecutive failures before action
+%{ else } # EXEC Command Probe
+            exec:
+              command: ${jsonencode(readiness_probe_config.command)}
+%{ endif }
+            initialDelaySeconds: ${readiness_probe_config.initial_delay_seconds}
+            periodSeconds: ${readiness_probe_config.period_seconds}
+            timeoutSeconds: ${readiness_probe_config.timeout_seconds}
+            successThreshold: ${readiness_probe_config.success_threshold}
+            failureThreshold: ${readiness_probe_config.failure_threshold}
 %{ endif }
           resources:
             requests:

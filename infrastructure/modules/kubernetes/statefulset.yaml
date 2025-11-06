@@ -62,8 +62,37 @@ spec:
             cpu: ${limit_cpu}
             memory: ${limit_memory}
 
-        # Conditional Probes (Only enabled if 'has_probing' is true)
-%{ if has_probing }
+%{ if liveness_probe_config.path != null || liveness_probe_config.command != null }
+        livenessProbe:
+%{ if liveness_probe_config.path != null } # HTTP GET Probe
+          httpGet:
+            path: ${liveness_probe_config.path}
+            port: ${target_port}
+%{ else } # EXEC Command Probe
+          exec:
+            command: ${jsonencode(liveness_probe_config.command)}
+%{ endif }
+          initialDelaySeconds: ${liveness_probe_config.initial_delay_seconds}
+          periodSeconds: ${liveness_probe_config.period_seconds}
+          timeoutSeconds: ${liveness_probe_config.timeout_seconds}
+          failureThreshold: ${liveness_probe_config.failure_threshold}
+%{ endif }
+
+%{ if readiness_probe_config.path != null || readiness_probe_config.command != null }
+        readinessProbe:
+%{ if readiness_probe_config.path != null } # HTTP GET Probe
+          httpGet:
+            path: ${readiness_probe_config.path}
+            port: ${target_port}
+%{ else } # EXEC Command Probe
+          exec:
+            command: ${jsonencode(readiness_probe_config.command)}
+%{ endif }
+          initialDelaySeconds: ${readiness_probe_config.initial_delay_seconds}
+          periodSeconds: ${readiness_probe_config.period_seconds}
+          timeoutSeconds: ${readiness_probe_config.timeout_seconds}
+          successThreshold: ${readiness_probe_config.success_threshold}
+          failureThreshold: ${readiness_probe_config.failure_threshold}
 %{ endif }
 
         # Dynamically injects all defined volume mounts

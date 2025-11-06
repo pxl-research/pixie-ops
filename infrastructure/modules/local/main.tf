@@ -1,3 +1,25 @@
+# Define default probe parameters based on the original configuration
+locals {
+  default_liveness_probe = {
+    path                  = null
+    command               = null
+    initial_delay_seconds = 60    # from original config
+    period_seconds        = 1200  # from original config
+    timeout_seconds       = 3     # from original config
+    failure_threshold     = 3     # from original config
+    success_threshold     = 1     # default for Liveness
+  }
+  default_readiness_probe = {
+    path                  = null
+    command               = null
+    initial_delay_seconds = 30    # from original config
+    period_seconds        = 300   # from original config
+    timeout_seconds       = 3     # from original config
+    failure_threshold     = 2     # from original config
+    success_threshold     = 3     # from original config
+  }
+}
+
 resource "kind_cluster" "default" {
   count           = 1
   name            = var.cluster_name
@@ -195,9 +217,9 @@ resource "kubectl_manifest" "storage_classes" {
 resource "kubectl_manifest" "app_deployment" {
   # Filter the map to only include apps that have a deployment config AND cluster_create is false
   for_each = {
-      for k, v in var.app_configs : k => v
-      if !var.cluster_create && try(v.deployment, null) != null
-    }
+    for k, v in var.app_configs : k => v
+    if !var.cluster_create && try(v.deployment, null) != null
+  }
 
   yaml_body = templatefile("${var.k8s_base_path}/deployment.yaml", {
     app_name               = each.value.metadata.app_name
@@ -209,12 +231,16 @@ resource "kubectl_manifest" "app_deployment" {
     rollout_trigger        = null_resource.rollout_trigger[each.key].triggers.timestamp
     image_pull_secret_name = ""
     replica_count          = each.value.deployment.replica_count
-    has_probing            = each.value.deployment.has_probing
     request_cpu            = each.value.deployment.request_cpu
     request_memory         = each.value.deployment.request_memory
     limit_cpu              = each.value.deployment.limit_cpu
     limit_memory           = each.value.deployment.limit_memory
     restart                = each.value.deployment.restart
+
+    # Merge user-defined probe config with defaults
+    liveness_probe_config = merge(local.default_liveness_probe, try(each.value.deployment.liveness_probe, {}))
+    readiness_probe_config = merge(local.default_readiness_probe, try(each.value.deployment.readiness_probe, {}))
+
     app_env = merge(
       # Merge .env file contents and explicit 'environment' map
       try(
@@ -262,13 +288,17 @@ resource "kubectl_manifest" "app_statefulset" {
     rollout_trigger        = null_resource.rollout_trigger[each.key].triggers.timestamp
     image_pull_secret_name = ""
     replica_count          = each.value.statefulset.replica_count
-    has_probing            = each.value.statefulset.has_probing
     request_cpu            = each.value.statefulset.request_cpu
     request_memory         = each.value.statefulset.request_memory
     limit_cpu              = each.value.statefulset.limit_cpu
     limit_memory           = each.value.statefulset.limit_memory
     data_volumes           = each.value.statefulset.data_volumes
     restart                = each.value.statefulset.restart
+
+    # Merge user-defined probe config with defaults
+    liveness_probe_config = merge(local.default_liveness_probe, try(each.value.statefulset.liveness_probe, {}))
+    readiness_probe_config = merge(local.default_readiness_probe, try(each.value.statefulset.readiness_probe, {}))
+
     app_env = merge(
       # Merge .env file contents and explicit 'environment' map
       try(

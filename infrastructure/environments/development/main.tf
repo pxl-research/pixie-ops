@@ -61,6 +61,26 @@ module "development" {
         #   Y=""
         # }
         depends_on      = []
+        # NOTE: Probes are run from the container, not externally and thus not via ingress!!!
+        # So we use INTERNAL port number and internal path.
+        liveness_probe = {
+          # Using an exec command similar to Docker Compose healthcheck 'test'
+          command               = ["sh", "-c", "wget -q -O /dev/null http://localhost:${8000}/livez || exit 1"]
+          # path                  = "/livez" # or we can use the path
+          initial_delay_seconds = 60
+          period_seconds        = 1200
+          timeout_seconds       = 3
+          failure_threshold     = 3
+        }
+        readiness_probe = {
+          # Readiness continues to use the HTTP GET path
+          path                  = "/readyz"
+          initial_delay_seconds = 30
+          period_seconds        = 300
+          timeout_seconds       = 3 # Adding default timeout
+          success_threshold     = 3
+          failure_threshold     = 2
+        }
       }
       /*
       # XOR (exclusive OR): use statefulset instead of deployment:

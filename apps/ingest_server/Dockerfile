@@ -2,6 +2,10 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# For liveness / readiness checks
+RUN apt-get update && apt-get install -y --no-install-recommends curl wget \
+    && rm -rf /var/lib/apt/lists/*
+
 # Build arguments as environment variables in container
 #ARG ARGO_WORKFLOWS_SERVER
 #ENV ARGO_WORKFLOWS_SERVER=${ARGO_WORKFLOWS_SERVER}
