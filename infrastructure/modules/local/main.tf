@@ -42,10 +42,10 @@ resource "kind_cluster" "default" {
         container_port = 80
         host_port      = 8080
       }
-      extra_port_mappings {
-        container_port = 443
-        host_port      = 8443
-      }
+      #extra_port_mappings {
+      #  container_port = 443
+      #  host_port      = 8443
+      #}
     }
 
     node {
