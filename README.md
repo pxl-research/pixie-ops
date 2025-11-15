@@ -146,3 +146,53 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 
 Note: only use CI/CD to build containers when pushing to main.
 Changing production should be done by manually applying Terraform/OpenTofu.
+
+
+```
++-------------------+
+|   Client (User)   |
+|       curl        |
++---------+---------+
+          |
+          v
++-------------------+
+|   localhost:80    |
+|   (hostPort:80)   |
++---------+---------+
+          |
+          v
++-------------------+
+|  kind Node (VM)   |
+| extraPortMapping  |
+| 80 -> 31007       |
++---------+---------+
+          |
+          v
++---------------------------+
+| NGINX Gateway Service     |
+| Type: NodePort            |
+| 31007 -> targetPort: 80   |
++-------------+-------------+
+              |
+              v
++---------------------------+
+| NGINX Gateway API Fabric  |
+| Controller Pod            |
+| Applies Gateway + Routes  |
++-------------+-------------+
+              |
+              v
++---------------------------+
+|   App Service (ClusterIP) |
+|   name: ${app_name}-svc   |
+|   port: 80 -> 8080        |
++-------------+-------------+
+              |
+              v
++---------------------------+
+|  Backend Pod              |
+|  ${app_name} container    |
+|  running on :8080         |
++---------------------------+
+
+```

@@ -41,7 +41,7 @@ module "development" {
     ingest_server = {
       metadata = {
         app_name        = "pixie-ingest"
-        target_port     = 8000
+        target_port     = 8080
       }
       deployment = {
         replica_count   = 1
