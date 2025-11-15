@@ -156,10 +156,10 @@ variable "ingress_host" {
   default     = "localhost"
 }
 
-variable "ingress_version" {
-  description = "The chart version for the NGINX Ingress Controller Helm release."
-  type        = string
-  default     = "4.7.1"
+variable "ingress_port" {
+  description = "The port number of the Gateway API or Ingress Controller."
+  type        = number
+  default     = 80
 }
 
 variable "argo_workflows_version" {

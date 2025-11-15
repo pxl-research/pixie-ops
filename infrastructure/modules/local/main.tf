@@ -39,9 +39,9 @@ resource "kind_cluster" "default" {
     node {
       role = "worker"
       extra_port_mappings {
-        container_port = 31007 # Matches containerPort: 31007
-        host_port      = 80    # Matches hostPort: 80
-        protocol       = "TCP" # Matches protocol: TCP (optional, as TCP is default)
+        container_port = 31007               # Matches containerPort: 31007
+        host_port      = var.ingress_port    # Matches hostPort: e.g. 80
+        protocol       = "TCP"               # Matches protocol: TCP (optional, as TCP is default)
       }
     }
   }
@@ -72,7 +72,7 @@ resource "null_resource" "install_nginx_gateway" {
     # 2. Fixed 'kubectl wait' resource name.
     # 3. Corrected and escaped the patch JSON payload.
     command = <<-EOT
-      kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=${local.nginx_gateway_version}" | kubectl apply -f - && kubectl apply --server-side -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/crds.yaml && kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/nodeport/deploy.yaml && kubectl wait --namespace nginx-gateway --for=condition=Available deployment/nginx-gateway --timeout=300s && kubectl patch nginxproxy nginx-gateway-proxy-config -n nginx-gateway --type='merge' -p='{"spec":{"kubernetes":{"service":{"nodePorts":[{"port":31007,"listenerPort":80}]}}}}'
+      kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=${local.nginx_gateway_version}" | kubectl apply -f - && kubectl apply --server-side -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/crds.yaml && kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/nodeport/deploy.yaml && kubectl wait --namespace nginx-gateway --for=condition=Available deployment/nginx-gateway --timeout=300s && kubectl patch nginxproxy nginx-gateway-proxy-config -n nginx-gateway --type='merge' -p='{"spec":{"kubernetes":{"service":{"nodePorts":[{"port":31007,"listenerPort":${var.ingress_port}}]}}}}'
     EOT
 
     environment = {
@@ -153,6 +153,7 @@ resource "kubectl_manifest" "http_gateway" {
     {
       project_namespace_name = var.project_namespace_name
       ingress_host = var.ingress_host
+      ingress_port = var.ingress_port
     }
   )
   depends_on = [null_resource.install_nginx_gateway]
@@ -373,6 +374,7 @@ resource "kubectl_manifest" "app_service" {
     namespace_name      = var.project_namespace_name
     is_local_deployment = var.is_local_deployment
     target_port         = each.value.metadata.target_port
+    ingress_port        = var.ingress_port
   })
   depends_on = [kubectl_manifest.app_deployment, kubectl_manifest.app_statefulset]
 }
@@ -410,6 +412,7 @@ resource "kubectl_manifest" "http_route" {
     namespace_name    = var.project_namespace_name
     ingress_host      = var.ingress_host
     ingress_path      = each.value.ingress.path
+    ingress_port      = var.ingress_port
     gateway_name      = "${var.project_namespace_name}-gateway"
     gateway_namespace = var.project_namespace_name
   })

@@ -16,10 +16,9 @@ module "development" {
   cluster_name            = "pixie"
   project_namespace_name  = "pixie"
   argo_namespace_name     = "argo"
-  ingress_namespace_name  = "ingress-nginx"
   argo_workflows_version  = "0.45.26"
-  ingress_version         = "4.7.1"
   ingress_host            = "localhost"
+  ingress_port            = 80
 
   # Applications
   # ------------
