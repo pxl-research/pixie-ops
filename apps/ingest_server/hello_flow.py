@@ -3,7 +3,7 @@ from shared.hera_workflow import HeraWorkflow
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(".env")
 
 ARGO_WORKFLOWS_SERVER = os.getenv("ARGO_WORKFLOWS_SERVER")
 

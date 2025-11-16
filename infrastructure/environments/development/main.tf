@@ -16,10 +16,9 @@ module "development" {
   cluster_name            = "pixie"
   project_namespace_name  = "pixie"
   argo_namespace_name     = "argo"
-  ingress_namespace_name  = "ingress-nginx"
   argo_workflows_version  = "0.45.26"
-  ingress_version         = "4.7.1"
   ingress_host            = "localhost"
+  ingress_port            = 80
 
   # Applications
   # ------------
@@ -41,13 +40,13 @@ module "development" {
     ingest_server = {
       metadata = {
         app_name        = "pixie-ingest"
-        target_port     = 8000
+        target_port     = 8080
       }
       deployment = {
         replica_count   = 1
         has_probing     = true
         image_name      = "pixie-ingest"
-        image_tag       = "1.0.1"
+        image_tag       = "1.0.2"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
         request_cpu     = "128m"

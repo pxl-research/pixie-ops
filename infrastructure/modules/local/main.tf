@@ -18,6 +18,8 @@ locals {
     failure_threshold     = 2     # from original config
     success_threshold     = 3     # from original config
   }
+
+  nginx_gateway_version = "v2.1.0"
 }
 
 resource "kind_cluster" "default" {
@@ -27,29 +29,20 @@ resource "kind_cluster" "default" {
   wait_for_ready  = true
 
   kind_config {
-    kind        = "Cluster"
-    api_version = "kind.x-k8s.io/v1alpha4"
+    kind          = "Cluster"
+    api_version   = "kind.x-k8s.io/v1alpha4"
 
     node {
       role = "control-plane"
-
-      kubeadm_config_patches = [
-        "kind: InitConfiguration\nnodeRegistration:\n  kubeletExtraArgs:\n    node-labels: \"ingress-ready=true\"\n"
-      ]
-
-      # Map ingress ports only
-      extra_port_mappings {
-        container_port = 80
-        host_port      = 8080
-      }
-      #extra_port_mappings {
-      #  container_port = 443
-      #  host_port      = 8443
-      #}
     }
 
     node {
       role = "worker"
+      extra_port_mappings {
+        container_port = 31007               # Matches containerPort: 31007
+        host_port      = var.ingress_port    # Matches hostPort: e.g. 80
+        protocol       = "TCP"               # Matches protocol: TCP (optional, as TCP is default)
+      }
     }
   }
 }
@@ -64,6 +57,32 @@ resource "kubectl_manifest" "project_namespace" {
 
   depends_on = [
     kind_cluster.default # Dependency remains, but is satisfied or skipped based on count
+  ]
+}
+
+resource "null_resource" "install_nginx_gateway" {
+  count = var.cluster_create ? 0 : 1
+
+  triggers = {
+    version = local.nginx_gateway_version
+  }
+
+  provisioner "local-exec" {
+    # 1. Removed all \ line continuations to fix hidden character issues.
+    # 2. Fixed 'kubectl wait' resource name.
+    # 3. Corrected and escaped the patch JSON payload.
+    command = <<-EOT
+      kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=${local.nginx_gateway_version}" | kubectl apply -f - && kubectl apply --server-side -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/crds.yaml && kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/nodeport/deploy.yaml && kubectl wait --namespace nginx-gateway --for=condition=Available deployment/nginx-gateway --timeout=300s && kubectl patch nginxproxy nginx-gateway-proxy-config -n nginx-gateway --type='merge' -p='{"spec":{"kubernetes":{"service":{"nodePorts":[{"port":31007,"listenerPort":${var.ingress_port}}]}}}}'
+    EOT
+
+    environment = {
+      KUBECONFIG = local.kube_config_path
+    }
+  }
+
+  depends_on = [
+    kind_cluster.default,
+    kubectl_manifest.project_namespace[0]
   ]
 }
 
@@ -88,6 +107,7 @@ resource "helm_release" "argo_workflows" {
   ]
 }
 
+/*
 resource "helm_release" "ingress_nginx" {
   count = var.cluster_create ? 0 : 1
 
@@ -124,6 +144,22 @@ resource "null_resource" "wait_for_ingress_nginx" {
   # Reference the singular instance [0]
   depends_on = [helm_release.ingress_nginx[0]]
 }
+*/
+
+resource "kubectl_manifest" "http_gateway" {
+  count = var.cluster_create ? 0 : 1
+  yaml_body = templatefile(
+    "${var.k8s_base_path}/gateway.yaml",
+    {
+      project_namespace_name = var.project_namespace_name
+      ingress_host = var.ingress_host
+      ingress_port = var.ingress_port
+    }
+  )
+  depends_on = [null_resource.install_nginx_gateway]
+}
+
+
 ########################################
 # RBAC CONFIGURATION
 ########################################
@@ -141,7 +177,7 @@ resource "kubectl_manifest" "hera_rbac" {
   depends_on = [
     # Reference the singular instances [0]
     helm_release.argo_workflows[0],
-    null_resource.wait_for_ingress_nginx[0]
+    null_resource.install_nginx_gateway
   ]
 }
 
@@ -338,11 +374,13 @@ resource "kubectl_manifest" "app_service" {
     namespace_name      = var.project_namespace_name
     is_local_deployment = var.is_local_deployment
     target_port         = each.value.metadata.target_port
+    ingress_port        = var.ingress_port
   })
   depends_on = [kubectl_manifest.app_deployment, kubectl_manifest.app_statefulset]
 }
 
 # 6. Create Kubernetes Ingress for each app that has ingress enabled
+/*
 resource "kubectl_manifest" "app_ingress" {
   for_each = {
     for k, v in var.app_configs : k => v
@@ -362,6 +400,28 @@ resource "kubectl_manifest" "app_ingress" {
     helm_release.ingress_nginx[0]
   ]
 }
+*/
+resource "kubectl_manifest" "http_route" {
+  for_each = {
+    for k, v in var.app_configs : k => v
+    if !var.cluster_create && v.ingress != null
+  }
+
+  yaml_body = templatefile("${var.k8s_base_path}/httproute.yaml", {
+    app_name          = each.value.metadata.app_name
+    namespace_name    = var.project_namespace_name
+    ingress_host      = var.ingress_host
+    ingress_path      = each.value.ingress.path
+    ingress_port      = var.ingress_port
+    gateway_name      = "${var.project_namespace_name}-gateway"
+    gateway_namespace = var.project_namespace_name
+  })
+
+  depends_on = [
+    kubectl_manifest.http_gateway,
+    #kubectl_manifest.reference_grant
+  ]
+}
 
 ########################################
 # HERA BASE IMAGE LOAD
@@ -379,7 +439,7 @@ resource "null_resource" "kind_image_load_base_images" {
   }
 
   depends_on = [
-    kubectl_manifest.app_ingress,
+    kubectl_manifest.http_route,
     kind_cluster.default
   ]
 }

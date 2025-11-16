@@ -1,3 +1,5 @@
+# Deprecated: not used anymore, but might serve as inspiration when using ingress instead of gateway API,
+# although gateway API is preferred.
 controller:
   hostPort:
     enabled: true
@@ -8,12 +10,12 @@ controller:
   nodeSelector:
     ingress-ready: "true"
   tolerations:
-  - effect: "NoSchedule"
-    key: "node-role.kubernetes.io/master"
-    operator: "Equal"
-  - effect: "NoSchedule"
-    key: "node-role.kubernetes.io/control-plane"
-    operator: "Equal"
+    - effect: "NoSchedule"
+      key: "node-role.kubernetes.io/master"
+      operator: "Equal"
+    - effect: "NoSchedule"
+      key: "node-role.kubernetes.io/control-plane"
+      operator: "Equal"
   publishService:
     enabled: false
   extraArgs:
