@@ -21,7 +21,7 @@ locals {
 
   nginx_gateway_version = "v2.1.0"
 
-  app_file_hashes = {
+  app_file_hashes_deployment = {
     for k, v in var.app_configs : k =>
     # Recursively get all files in the Docker build context
     sha1(join("", [
@@ -30,6 +30,16 @@ locals {
       filemd5("${v.deployment.docker_context}/${f}")
     ]))
     if !var.cluster_create && try(v.deployment, null) != null
+  }
+  app_file_hashes_statefulset = {
+    for k, v in var.app_configs : k =>
+    # Recursively get all files in the Docker build context
+    sha1(join("", [
+      for f in fileset(v.deployment.docker_context, "**") :
+      # Compute and join the MD5 hash of each file
+      filemd5("${v.deployment.docker_context}/${f}")
+    ]))
+    if !var.cluster_create && try(v.statefulset, null) != null
   }
 }
 
@@ -212,12 +222,27 @@ resource "docker_image" "app" {
   ]
 }
 
-resource "null_resource" "rollout_trigger_docker" {
+resource "null_resource" "rollout_trigger_deployment" {
   # Ensure the keys match those used in the kubectl_manifest (each.key)
-  for_each = local.app_file_hashes
+  for_each = local.app_file_hashes_deployment
 
   triggers = {
-    # 💡 Use the computed file hash as the trigger value
+    # Use the computed file hash as the trigger value
+    app_source_hash = each.value
+  }
+
+  # This depends on the docker image being built before the deployment is triggered
+  depends_on = [
+    docker_image.app
+  ]
+}
+
+resource "null_resource" "rollout_trigger_statefulset" {
+  # Ensure the keys match those used in the kubectl_manifest (each.key)
+  for_each = local.app_file_hashes_statefulset
+
+  triggers = {
+    # Use the computed file hash as the trigger value
     app_source_hash = each.value
   }
 
@@ -290,7 +315,7 @@ resource "kubectl_manifest" "app_deployment" {
     target_port            = each.value.metadata.target_port
     image_name             = each.value.deployment.image_name
     image_tag              = each.value.deployment.image_tag
-    rollout_trigger        = null_resource.rollout_trigger_docker[each.key].triggers.app_source_hash
+    rollout_trigger        = null_resource.rollout_trigger_deployment[each.key].triggers.app_source_hash
     image_pull_secret_name = ""
     replica_count          = each.value.deployment.replica_count
     request_cpu            = each.value.deployment.request_cpu
@@ -327,7 +352,7 @@ resource "kubectl_manifest" "app_deployment" {
 
   depends_on = [
     null_resource.kind_image_load_app,
-    null_resource.rollout_trigger,
+    null_resource.rollout_trigger_deployment,
     kubectl_manifest.storage_classes
   ]
 }
@@ -347,7 +372,7 @@ resource "kubectl_manifest" "app_statefulset" {
     target_port            = each.value.metadata.target_port
     image_name             = each.value.statefulset.image_name
     image_tag              = each.value.statefulset.image_tag
-    rollout_trigger        = null_resource.rollout_trigger[each.key].triggers.timestamp
+    rollout_trigger        = null_resource.rollout_trigger_statefulset[each.key].triggers.app_source_hash
     image_pull_secret_name = ""
     replica_count          = each.value.statefulset.replica_count
     request_cpu            = each.value.statefulset.request_cpu
@@ -385,7 +410,7 @@ resource "kubectl_manifest" "app_statefulset" {
 
   depends_on = [
     null_resource.kind_image_load_app,
-    null_resource.rollout_trigger,
+    null_resource.rollout_trigger_statefulset,
     kubectl_manifest.storage_classes
   ]
 }
