@@ -46,7 +46,7 @@ module "development" {
         replica_count   = 1
         has_probing     = true
         image_name      = "pixie-ingest"
-        image_tag       = "1.0.1"
+        image_tag       = "1.0.2"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
         request_cpu     = "128m"
