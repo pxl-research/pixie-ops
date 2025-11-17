@@ -64,7 +64,7 @@ module "development" {
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
           # Using an exec command similar to Docker Compose healthcheck 'test'
-          command               = ["sh", "-c", "wget -q -O /dev/null http://localhost:${8000}/livez || exit 1"]
+          command               = ["sh", "-c", "wget -q -O /dev/null http://localhost:${8080}/livez || exit 1"]
           # path                  = "/livez" # or we can use the path
           initial_delay_seconds = 60
           period_seconds        = 1200
