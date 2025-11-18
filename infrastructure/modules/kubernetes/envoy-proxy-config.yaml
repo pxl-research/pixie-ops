@@ -1,0 +1,12 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoyproxy-default
+  namespace: envoy-gateway-system # This MUST be in the Envoy Gateway's install namespace
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      # Change the service type from the default LoadBalancer to NodePort
+      service:
+        type: NodePort

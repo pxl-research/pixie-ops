@@ -23,3 +23,6 @@ spec:
       backendRefs:
         - name: ${app_name}-svc
           port: ${ingress_port}
+          timeouts:
+            request: 18000s
+            backendRequest: 18000s

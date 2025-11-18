@@ -19,7 +19,7 @@ locals {
     success_threshold     = 3     # from original config
   }
 
-  nginx_gateway_version = "v2.1.0"
+  nginx_gateway_version = "v2.2.1"
 
   app_file_hashes_deployment = {
     for k, v in var.app_configs : k =>
@@ -81,6 +81,7 @@ resource "kubectl_manifest" "project_namespace" {
   ]
 }
 
+/*
 resource "null_resource" "install_nginx_gateway" {
   count = var.cluster_create ? 0 : 1
 
@@ -101,6 +102,27 @@ resource "null_resource" "install_nginx_gateway" {
     }
   }
 
+  depends_on = [
+    kind_cluster.default,
+    kubectl_manifest.project_namespace[0]
+  ]
+}
+*/
+resource "null_resource" "install_envoy_gateway" {
+  # Change the resource name to reflect the new component
+  count = var.cluster_create ? 0 : 1
+
+  provisioner "local-exec" {
+    # Replace the complex NGINX installation and patching with the single Envoy Gateway command
+    command = "kubectl apply --server-side -f https://github.com/envoyproxy/gateway/releases/download/v1.6.0/install.yaml"
+    # Ensure the command uses the KUBECONFIG if needed, though often it's configured globally.
+    # We'll keep the environment block for consistency, but you might remove it if not needed.
+    environment = {
+      KUBECONFIG = local.kube_config_path
+    }
+  }
+
+  # Keep the dependencies to ensure the cluster and namespace are ready
   depends_on = [
     kind_cluster.default,
     kubectl_manifest.project_namespace[0]
@@ -167,20 +189,6 @@ resource "null_resource" "wait_for_ingress_nginx" {
 }
 */
 
-resource "kubectl_manifest" "http_gateway" {
-  count = var.cluster_create ? 0 : 1
-  yaml_body = templatefile(
-    "${var.k8s_base_path}/gateway.yaml",
-    {
-      project_namespace_name = var.project_namespace_name
-      ingress_host = var.ingress_host
-      ingress_port = var.ingress_port
-    }
-  )
-  depends_on = [null_resource.install_nginx_gateway]
-}
-
-
 ########################################
 # RBAC CONFIGURATION
 ########################################
@@ -198,7 +206,6 @@ resource "kubectl_manifest" "hera_rbac" {
   depends_on = [
     # Reference the singular instances [0]
     helm_release.argo_workflows[0],
-    null_resource.install_nginx_gateway
   ]
 }
 
@@ -452,6 +459,42 @@ resource "kubectl_manifest" "app_ingress" {
   ]
 }
 */
+
+resource "kubectl_manifest" "envoy_proxy_config" {
+  count = var.cluster_create ? 0 : 1
+  yaml_body = file("${var.k8s_base_path}/envoy-proxy-config.yaml")
+  depends_on = [
+    null_resource.install_envoy_gateway,
+    kubectl_manifest.app_service
+  ]
+}
+
+resource "kubectl_manifest" "envoy_gateway_class" {
+  count = var.cluster_create ? 0 : 1
+  yaml_body = file("${var.k8s_base_path}/gateway-class.yaml")
+  depends_on = [
+    null_resource.install_envoy_gateway,
+    kubectl_manifest.envoy_proxy_config,
+    kubectl_manifest.app_service
+  ]
+}
+
+resource "kubectl_manifest" "http_gateway" {
+  count = var.cluster_create ? 0 : 1
+  yaml_body = templatefile(
+    "${var.k8s_base_path}/gateway.yaml", {
+      project_namespace_name = var.project_namespace_name
+      ingress_host = var.ingress_host
+      ingress_port = var.ingress_port
+    }
+  )
+  depends_on = [
+    null_resource.install_envoy_gateway,
+    kubectl_manifest.envoy_gateway_class,
+    kubectl_manifest.app_service
+  ]
+}
+
 resource "kubectl_manifest" "http_route" {
   for_each = {
     for k, v in var.app_configs : k => v
@@ -469,8 +512,7 @@ resource "kubectl_manifest" "http_route" {
   })
 
   depends_on = [
-    kubectl_manifest.http_gateway,
-    #kubectl_manifest.reference_grant
+    kubectl_manifest.http_gateway
   ]
 }
 

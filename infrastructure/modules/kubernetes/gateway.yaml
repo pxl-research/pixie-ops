@@ -4,7 +4,7 @@ metadata:
   name: ${project_namespace_name}-gateway
   namespace: ${project_namespace_name}
 spec:
-  gatewayClassName: nginx
+  gatewayClassName: envoy-gateway # nginx
   listeners:
     - name: http
       protocol: HTTP
@@ -13,3 +13,7 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+      timeouts:
+        read: 18000s
+        send: 18000s
+        connect: 18000s

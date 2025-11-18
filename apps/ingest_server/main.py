@@ -128,6 +128,7 @@ def read_root():
 @app.post("/trigger")
 def trigger_workflow():
     try:
+        time.sleep(60)
         flow = HelloFlow()
         result = flow.submit()  # submits the workflow and waits for completion
         return result
