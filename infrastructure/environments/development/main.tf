@@ -45,10 +45,20 @@ module "development" {
       deployment = {
         replica_count   = 1
         has_probing     = true
+
+        # Remote Docker apps
+        image_name      = "tiangolo/uvicorn-gunicorn-fastapi"
+        image_tag       = "python3.10"
+        docker_context  = null
+        dockerfile_path = null
+
+        # Local Docker apps
+        /*
         image_name      = "pixie-ingest"
         image_tag       = "1.0.2"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
+        */
         request_cpu     = "128m"
         request_memory  = "128Mi"
         limit_cpu       = "256m"

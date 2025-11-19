@@ -19,7 +19,7 @@ locals {
     success_threshold     = 3     # from original config
   }
 
-  nginx_gateway_version = "v2.1.0"
+  nginx_gateway_version = "v2.2.0"
 
   app_file_hashes_deployment = {
     for k, v in var.app_configs : k =>
@@ -29,7 +29,7 @@ locals {
       # Compute and join the MD5 hash of each file
       filemd5("${v.deployment.docker_context}/${f}")
     ]))
-    if !var.cluster_create && try(v.deployment, null) != null
+    if !var.cluster_create && try(v.deployment, null) != null && try(v.deployment.docker_context, null) != null
   }
   app_file_hashes_statefulset = {
     for k, v in var.app_configs : k =>
@@ -39,7 +39,7 @@ locals {
       # Compute and join the MD5 hash of each file
       filemd5("${v.deployment.docker_context}/${f}")
     ]))
-    if !var.cluster_create && try(v.statefulset, null) != null
+    if !var.cluster_create && try(v.statefulset, null) != null && try(v.statefulset.docker_context, null) != null
   }
 }
 
@@ -207,10 +207,12 @@ resource "kubectl_manifest" "hera_rbac" {
 # DYNAMIC APP DEPLOYMENT (IMAGE BUILD, LOAD, K8S MANIFESTS)
 ########################################
 
-# 1. Build the local Docker image for each app using for_each
+# Build the local Docker image for each app using for_each
 resource "docker_image" "app" {
-  # Use conditional map: empty map if true, app_configs if false
-  for_each = var.cluster_create ? {} : var.app_configs
+  for_each = {
+    for k, v in var.app_configs : k => v
+    if !var.cluster_create && v.deployment != null && v.deployment.docker_context != null
+  }
 
   name = "${each.value.deployment.image_name}:${each.value.deployment.image_tag}"
   build {
@@ -221,6 +223,23 @@ resource "docker_image" "app" {
     kubectl_manifest.hera_rbac # Already a for_each resource, no [0] needed
   ]
 }
+
+resource "docker_image" "remote_app" {
+  for_each = {
+    for k, v in var.app_configs : k => v
+    if !var.cluster_create && v.deployment != null && v.deployment.docker_context == null
+  }
+  # The name MUST include the full registry path for pulling remote images,
+  # e.g., ghcr.io/org/repo/image:tag
+  name = "${each.value.deployment.image_name}:${each.value.deployment.image_tag}"
+  # The 'pull_trigger' ensures the image is pulled if it doesn't exist or if the source changes.
+  pull_triggers = [each.value.deployment.image_tag]
+  depends_on = [
+    kubectl_manifest.hera_rbac
+  ]
+}
+
+# TODO: statefulset
 
 resource "null_resource" "rollout_trigger_deployment" {
   # Ensure the keys match those used in the kubectl_manifest (each.key)
@@ -254,20 +273,25 @@ resource "null_resource" "rollout_trigger_statefulset" {
 
 # 2. Load the image into Kind for each app using for_each
 resource "null_resource" "kind_image_load_app" {
-  # Use conditional map: empty map if true, app_configs if false
   for_each = var.cluster_create ? {} : var.app_configs
 
   triggers = {
-    image_id     = docker_image.app[each.key].image_id
+    # Safe lookup for the ID (ensures image is ready)
+    image_id     = try(docker_image.app[each.key].image_id, docker_image.remote_app[each.key].image_id)
+    # Safe lookup for the NAME (used in the command)
+    image_name   = try(docker_image.app[each.key].name, docker_image.remote_app[each.key].name)
     cluster_name = var.cluster_name
   }
+
   provisioner "local-exec" {
-    command = "kind load docker-image ${docker_image.app[each.key].name} --name ${var.cluster_name}"
+    # Use the name calculated in the triggers block
+    command = "kind load docker-image ${self.triggers.image_name} --name ${var.cluster_name}"
   }
 
   depends_on = [
     kind_cluster.default,
     docker_image.app,
+    docker_image.remote_app,
   ]
 }
 
@@ -315,7 +339,7 @@ resource "kubectl_manifest" "app_deployment" {
     target_port            = each.value.metadata.target_port
     image_name             = each.value.deployment.image_name
     image_tag              = each.value.deployment.image_tag
-    rollout_trigger        = null_resource.rollout_trigger_deployment[each.key].triggers.app_source_hash
+    rollout_trigger        = try(null_resource.rollout_trigger_deployment[each.key].triggers.app_source_hash, "")
     image_pull_secret_name = ""
     replica_count          = each.value.deployment.replica_count
     request_cpu            = each.value.deployment.request_cpu
@@ -332,7 +356,7 @@ resource "kubectl_manifest" "app_deployment" {
       # Merge .env file contents and explicit 'environment' map
       try(
         # Map from env_file
-        each.value.deployment.env_file != null ?
+        each.value.deployment.env_file != null && each.value.deployment.dockerfile_path != null && each.value.deployment.docker_context != null ?
           {
             for line in split("\n", file("${each.value.deployment.dockerfile_path}/${each.value.deployment.env_file}")) :
             # Split on the first '=' to handle values with multiple '='

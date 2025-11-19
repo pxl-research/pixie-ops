@@ -1,10 +1,17 @@
 import os
 import time
+import uuid
+import threading
 from typing import Any
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, status, BackgroundTasks
 import psycopg2 as pg
 from pydantic import BaseModel, Field
 from hello_flow import HelloFlow  # Import your HelloFlow class
+
+# -----------------------------
+# In-memory workflow status store
+# -----------------------------
+workflow_status: dict[str, dict[str, Any]] = {}  # {workflow_id: {"status": "running|completed|failed", "result": Any}}
 
 app = FastAPI()
 
@@ -125,15 +132,35 @@ def read_data():
 def read_root():
     return {"message": "FastAPI is running and ready to start a workflow."}
 
-@app.post("/trigger")
-def trigger_workflow():
+def run_workflow(workflow_id: str):
     try:
+        workflow_status[workflow_id] = {"status": "running", "result": None}
+        # Simulate long-running work
+        time.sleep(61)
         flow = HelloFlow()
-        result = flow.submit()  # submits the workflow and waits for completion
-        return result
+        result = flow.submit()
+        workflow_status[workflow_id] = {"status": "completed", "result": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to trigger workflow: {e}")
+        workflow_status[workflow_id] = {"status": "failed", "result": str(e)}
 
+@app.post("/trigger")
+def trigger_workflow(background_tasks: BackgroundTasks, status_code=status.HTTP_202_ACCEPTED):
+    workflow_id = str(uuid.uuid4())
+    # Schedule the workflow in the background
+    background_tasks.add_task(run_workflow, workflow_id)
+    # Return immediately to the client
+    return {"workflow_id": workflow_id, "status": "submitted", "message": "Workflow is running asynchronously"}
+
+
+@app.get("/status/{workflow_id}")
+def workflow_status_endpoint(workflow_id: str):
+    info = workflow_status.get(workflow_id)
+    if info is None:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    if info["status"] in ["completed", "failed"]:
+        del workflow_status[workflow_id]
+
+    return {"workflow_id": workflow_id, "status": info["status"], "result": info["result"]}
 
 # -----------------------------
 # Liveness and readiness checks

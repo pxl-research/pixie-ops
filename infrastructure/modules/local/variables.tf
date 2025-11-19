@@ -52,8 +52,8 @@ variable "app_configs" {
       replica_count      = number
       image_name         = string
       image_tag          = string
-      docker_context     = string
-      dockerfile_path    = string
+      docker_context     = optional(string, null)
+      dockerfile_path    = optional(string, null)
       request_cpu        = string
       request_memory     = string
       limit_cpu          = string
