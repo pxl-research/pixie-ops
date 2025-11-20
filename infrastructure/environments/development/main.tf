@@ -41,10 +41,18 @@ module "development" {
       metadata = {
         app_name        = "pixie-ingest"
         target_port     = 8080
+        # target_port     = 80
       }
       deployment = {
         replica_count   = 1
-        has_probing     = true
+
+        # Remote Docker apps, e.g. (note: this one uses port 80, doesn't have liveness or readiness checks, and does not have a .env file):
+        # image_name      = "tiangolo/uvicorn-gunicorn-fastapi"
+        # image_tag       = "python3.10"
+        # docker_context  = null
+        # dockerfile_path = null
+
+        # Local Docker apps
         image_name      = "pixie-ingest"
         image_tag       = "1.0.2"
         docker_context  = local.apps_path
@@ -85,7 +93,6 @@ module "development" {
       # XOR (exclusive OR): use statefulset instead of deployment:
       statefulset = {
         replica_count   = 1
-        has_probing     = false
         image_name      = "pixie-db"
         image_tag       = "1.0.0"
         docker_context  = local.apps_path
