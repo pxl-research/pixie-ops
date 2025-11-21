@@ -64,6 +64,7 @@ module "development" {
         limit_memory    = "256Mi"
         restart         = "Always" # Always (default), OnFailure, Never
         env_file        = ".env" # Path starting relatively from Dockerfile path
+        # environment overrides any variables with the same name that are loaded from env_file
         # environment = {
         #   X=""
         #   Y=""

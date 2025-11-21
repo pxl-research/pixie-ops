@@ -16,9 +16,9 @@ workflow_status: dict[str, dict[str, Any]] = {}  # {workflow_id: {"status": "run
 app = FastAPI()
 
 DB_HOST = os.environ.get("POSTGRES_HOST", "db-service-name")
-DB_NAME = os.environ.get("POSTGRES_DB", "workflow_db")
-DB_USER = os.environ.get("POSTGRES_USER", "postgres_user")
-DB_PASS = os.environ.get("POSTGRES_PASSWORD", "postgres_password")
+DB_NAME = os.environ.get("POSTGRES_DB", "pixie_db")
+DB_USER = os.environ.get("POSTGRES_USER", "user")
+DB_PASS = os.environ.get("POSTGRES_PASSWORD", "password")
 DB_PORT = os.environ.get("POSTGRES_PORT", "5432")
 
 class DataItem(BaseModel):

@@ -129,6 +129,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Make environment variables overwrite what is in .env (in order to patch what is in pulled Docker image).
 * Healthcheck for StatefulSet based on: https://github.com/pxl-research/pixie-tabular-db/blob/main/infra/docker/docker-compose.dev.yml
 * Create a StatefulSet example of a Postgres database pod that is accessed in the FastAPI pod.
 * Might look into simpler Dockerfile (no shared) to make example simpler.
