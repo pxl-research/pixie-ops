@@ -46,6 +46,7 @@ variable "app_configs" {
     metadata = object({
       app_name    = string
       target_port = number
+      service_port = number
     })
 
     deployment = optional(object({

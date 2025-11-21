@@ -449,7 +449,7 @@ resource "kubectl_manifest" "app_service" {
     namespace_name      = var.project_namespace_name
     is_local_deployment = var.is_local_deployment
     target_port         = each.value.metadata.target_port
-    ingress_port        = var.ingress_port
+    service_port        = each.value.metadata.service_port
   })
   depends_on = [kubectl_manifest.app_deployment, kubectl_manifest.app_statefulset]
 }

@@ -15,6 +15,8 @@ spec:
   # It is only reachable from within the cluster.
   # An Ingress controller, which handles external traffic, uses an Ingress resource to route traffic to backend Services,
   # and for this purpose, ClusterIP is the standard, most efficient, and secure choice.
+  # Otherwise, when a service is not externally reachable via Gateway or Ingress controller,
+  # a ClusterIP is sufficient.
   type: ClusterIP
   # The selector targets pods (or pods in Deployment) with the matching label.
   # If no Pods match the selector, the Service has no endpoints (connection refused)
@@ -25,6 +27,6 @@ spec:
     app: ${app_name}
   ports:
     - name: http
-      port: ${ingress_port} # Service port the Ingress Controller will target
+      port: ${service_port} # Internal port or port the Gateway or Ingress Controller will target
       targetPort: ${target_port} # The container port to forward traffic to
       protocol: TCP

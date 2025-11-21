@@ -1,5 +1,6 @@
 locals {
   apps_path = "${path.module}/../../../apps"
+  ingress_port = 80
 }
 
 module "development" {
@@ -18,7 +19,7 @@ module "development" {
   argo_namespace_name     = "argo"
   argo_workflows_version  = "0.45.26"
   ingress_host            = "localhost"
-  ingress_port            = 80
+  ingress_port            = local.ingress_port
 
   # Applications
   # ------------
@@ -41,7 +42,7 @@ module "development" {
       metadata = {
         app_name        = "pixie-ingest"
         target_port     = 8080
-        # target_port     = 80
+        service_port    = local.ingress_port
       }
       deployment = {
         replica_count   = 1
@@ -68,7 +69,7 @@ module "development" {
         #   Y=""
         # }
         depends_on      = []
-        # NOTE: Probes are run from the container, not externally and thus not via ingress!!!
+        # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
           # Using an exec command similar to Docker Compose healthcheck 'test'
