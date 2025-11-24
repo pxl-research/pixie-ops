@@ -31,6 +31,19 @@ spec:
         kubectl.kubernetes.io/restartedAt: ${rollout_trigger}
     spec:
       restartPolicy: ${restart}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - ${os}
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - ${architecture}
 %{ if is_local_deployment == false }
       imagePullSecrets:
         - name: ${image_pull_secret_name}

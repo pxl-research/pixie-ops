@@ -16,7 +16,6 @@ module "development" {
   # ------------------
   cluster_name            = "pixie"
   project_namespace_name  = "pixie"
-  argo_namespace_name     = "argo"
   argo_workflows_version  = "0.45.26"
   ingress_host            = "localhost"
   ingress_port            = local.ingress_port
@@ -55,7 +54,7 @@ module "development" {
 
         # Local Docker apps
         image_name      = "pixie-ingest"
-        image_tag       = "1.0.2"
+        image_tag       = "1.0.0"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
         request_cpu     = "128m"

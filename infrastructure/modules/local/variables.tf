@@ -10,12 +10,6 @@ variable "cluster_name" {
   default     = "kind"
 }
 
-variable "argo_namespace_name" {
-  description = "The Kubernetes namespace where Argo Workflows will be installed."
-  type        = string
-  default     = "argo"
-}
-
 variable "project_namespace_name" {
   description = "The primary Kubernetes namespace for the application deployment."
   type        = string
@@ -59,6 +53,8 @@ variable "app_configs" {
       request_memory     = string
       limit_cpu          = string
       limit_memory       = string
+      os                 = optional(string, "linux")
+      architecture       = optional(string, "amd64")
       restart            = optional(string, "Always")
       env_file           = optional(string, null)
       environment        = optional(map(string), {})
@@ -92,6 +88,8 @@ variable "app_configs" {
       request_memory   = string
       limit_cpu        = string
       limit_memory     = string
+      os               = optional(string, "linux")
+      architecture     = optional(string, "amd64")
       restart          = optional(string, "Always")
       env_file         = optional(string, null)
       environment      = optional(map(string), {})

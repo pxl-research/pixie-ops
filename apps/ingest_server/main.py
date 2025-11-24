@@ -137,7 +137,7 @@ def run_workflow(workflow_id: str):
         workflow_status[workflow_id] = {"status": "running", "result": None}
         # Simulate long-running work
         time.sleep(61)
-        flow = HelloFlow()
+        flow = HelloFlow(namespace="pixie")
         result = flow.submit()
         workflow_status[workflow_id] = {"status": "completed", "result": result}
     except Exception as e:

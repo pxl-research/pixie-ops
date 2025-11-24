@@ -117,8 +117,8 @@ resource "helm_release" "argo_workflows" {
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-workflows"
   version          = var.argo_workflows_version
-  namespace        = var.argo_namespace_name
-  create_namespace = true
+  namespace        = var.project_namespace_name
+  create_namespace = false
 
   values = [file("${var.k8s_base_path}/argo-workflows-values.yaml")]
 
@@ -170,8 +170,7 @@ resource "null_resource" "wait_for_ingress_nginx" {
 resource "kubectl_manifest" "http_gateway" {
   count = var.cluster_create ? 0 : 1
   yaml_body = templatefile(
-    "${var.k8s_base_path}/gateway.yaml",
-    {
+    "${var.k8s_base_path}/gateway.yaml", {
       project_namespace_name = var.project_namespace_name
       ingress_host = var.ingress_host
       ingress_port = var.ingress_port
@@ -193,7 +192,10 @@ resource "kubectl_manifest" "hera_rbac" {
     binding_default = "${var.k8s_base_path}/argo-default-task-binding.yaml"
   }
 
-  yaml_body = file(each.value)
+  yaml_body = templatefile(each.value, {
+      project_namespace_name = var.project_namespace_name
+    }
+  )
 
   depends_on = [
     # Reference the singular instances [0]
@@ -347,6 +349,8 @@ resource "kubectl_manifest" "app_deployment" {
     limit_cpu              = each.value.deployment.limit_cpu
     limit_memory           = each.value.deployment.limit_memory
     restart                = each.value.deployment.restart
+    os                     = each.value.deployment.os
+    architecture           = each.value.deployment.architecture
 
     # Merge user-defined probe config with defaults
     liveness_probe_config = merge(local.default_liveness_probe, try(each.value.deployment.liveness_probe, {}))
@@ -405,6 +409,8 @@ resource "kubectl_manifest" "app_statefulset" {
     limit_memory           = each.value.statefulset.limit_memory
     data_volumes           = each.value.statefulset.data_volumes
     restart                = each.value.statefulset.restart
+    os                     = each.value.statefulset.os
+    architecture           = each.value.statefulset.architecture
 
     # Merge user-defined probe config with defaults
     liveness_probe_config = merge(local.default_liveness_probe, try(each.value.statefulset.liveness_probe, {}))
