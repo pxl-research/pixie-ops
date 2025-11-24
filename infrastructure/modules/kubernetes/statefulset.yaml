@@ -32,11 +32,11 @@ spec:
               - key: kubernetes.io/os
                 operator: In
                 values:
-                - ${os}
+                - ${platform_os}
               - key: kubernetes.io/arch
                 operator: In
                 values:
-                - ${architecture}
+                - ${platform_architecture}
 %{ if is_local_deployment == false }
       imagePullSecrets:
         - name: ${image_pull_secret_name}

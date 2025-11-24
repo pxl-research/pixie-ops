@@ -349,8 +349,8 @@ resource "kubectl_manifest" "app_deployment" {
     limit_cpu              = each.value.deployment.limit_cpu
     limit_memory           = each.value.deployment.limit_memory
     restart                = each.value.deployment.restart
-    os                     = each.value.deployment.os
-    architecture           = each.value.deployment.architecture
+    platform_os            = each.value.deployment.platform_os
+    platform_architecture  = each.value.deployment.platform_architecture
 
     # Merge user-defined probe config with defaults
     liveness_probe_config = merge(local.default_liveness_probe, try(each.value.deployment.liveness_probe, {}))
@@ -409,8 +409,8 @@ resource "kubectl_manifest" "app_statefulset" {
     limit_memory           = each.value.statefulset.limit_memory
     data_volumes           = each.value.statefulset.data_volumes
     restart                = each.value.statefulset.restart
-    os                     = each.value.statefulset.os
-    architecture           = each.value.statefulset.architecture
+    platform_os            = each.value.statefulset.platform_os
+    platform_architecture  = each.value.statefulset.platform_architecture
 
     # Merge user-defined probe config with defaults
     liveness_probe_config = merge(local.default_liveness_probe, try(each.value.statefulset.liveness_probe, {}))
