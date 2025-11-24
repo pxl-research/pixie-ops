@@ -37,6 +37,35 @@ module "development" {
   }
 
   app_configs = {
+    database_server = {
+      metadata = {
+        app_name        = "pixie-db"
+        target_port     = 5432
+        service_port    = 5432
+      }
+      statefulset = {
+        replica_count   = 1
+        image_name      = "pixie-db"
+        image_tag       = "1.0.0"
+        docker_context  = local.apps_path
+        dockerfile_path = "${local.apps_path}/database_server"
+        request_cpu     = "128m"
+        request_memory  = "128Mi"
+        limit_cpu       = "256m"
+        limit_memory    = "256Mi"
+        restart         = "Always"
+        env_file        = ".env" # Path starting relatively from Dockerfile path
+        data_volumes = {
+          pgdata = {
+            name               = "pgdata"
+            mount_path         = "/var/lib/app/data"
+            storage_request    = "1Gi"
+            storage_class_name = "fast-storage"
+            access_mode        = "ReadWriteOnce"
+          }
+        }
+      }
+    }
     ingest_server = {
       metadata = {
         app_name        = "pixie-ingest"
@@ -54,7 +83,7 @@ module "development" {
 
         # Local Docker apps
         image_name      = "pixie-ingest"
-        image_tag       = "1.0.0"
+        image_tag       = "1.0.1"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
         request_cpu     = "128m"
@@ -68,7 +97,7 @@ module "development" {
         #   X=""
         #   Y=""
         # }
-        depends_on      = []
+        depends_on      = ["pixie-db"]
         # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
@@ -90,31 +119,6 @@ module "development" {
           failure_threshold     = 2
         }
       }
-      /*
-      # XOR (exclusive OR): use statefulset instead of deployment:
-      statefulset = {
-        replica_count   = 1
-        image_name      = "pixie-db"
-        image_tag       = "1.0.0"
-        docker_context  = local.apps_path
-        dockerfile_path = "${local.apps_path}/ingest_server"
-        request_cpu     = "128m"
-        request_memory  = "128Mi"
-        limit_cpu       = "256m"
-        limit_memory    = "256Mi"
-        restart         = "Always"
-        env_file        = ".env" # Path starting relatively from Dockerfile path
-        data_volumes = {
-          pgdata = {
-            name               = "pgdata"
-            mount_path         = "/var/lib/app/data"
-            storage_request    = "1Gi"
-            storage_class_name = "fast-storage"
-            access_mode        = "ReadWriteOnce"
-          }
-        }
-      }
-      */
       ingress = {
         path = "/ingest"
       }

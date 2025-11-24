@@ -35,9 +35,9 @@ locals {
     for k, v in var.app_configs : k =>
     # Recursively get all files in the Docker build context
     sha1(join("", [
-      for f in fileset(v.deployment.docker_context, "**") :
+      for f in fileset(v.statefulset.docker_context, "**") :
       # Compute and join the MD5 hash of each file
-      filemd5("${v.deployment.docker_context}/${f}")
+      filemd5("${v.statefulset.docker_context}/${f}")
     ]))
     if !var.cluster_create && try(v.statefulset, null) != null && try(v.statefulset.docker_context, null) != null
   }
@@ -213,35 +213,35 @@ resource "kubectl_manifest" "hera_rbac" {
 resource "docker_image" "app" {
   for_each = {
     for k, v in var.app_configs : k => v
-    if !var.cluster_create && v.deployment != null && v.deployment.docker_context != null
+    if !var.cluster_create && ((v.deployment != null && v.deployment.docker_context != null) || (v.statefulset != null && v.statefulset.docker_context != null))
   }
 
-  name = "${each.value.deployment.image_name}:${each.value.deployment.image_tag}"
+  name = (each.value.deployment != null) ? "${each.value.deployment.image_name}:${each.value.deployment.image_tag}" : "${each.value.statefulset.image_name}:${each.value.statefulset.image_tag}"
+
   build {
-    context    = "${each.value.deployment.docker_context}"
-    dockerfile = "${each.value.deployment.dockerfile_path}/Dockerfile"
+    context    = (each.value.deployment != null) ? each.value.deployment.docker_context : each.value.statefulset.docker_context
+    dockerfile = (each.value.deployment != null) ? "${each.value.deployment.dockerfile_path}/Dockerfile"  : "${each.value.statefulset.dockerfile_path}/Dockerfile"
   }
+
   depends_on = [
-    kubectl_manifest.hera_rbac # Already a for_each resource, no [0] needed
+    kubectl_manifest.hera_rbac
   ]
 }
 
 resource "docker_image" "remote_app" {
   for_each = {
     for k, v in var.app_configs : k => v
-    if !var.cluster_create && v.deployment != null && v.deployment.docker_context == null
+    if !var.cluster_create && ((v.deployment != null && v.deployment.docker_context == null) || (v.statefulset != null && v.statefulset.docker_context == null))
   }
   # The name MUST include the full registry path for pulling remote images,
   # e.g., ghcr.io/org/repo/image:tag
-  name = "${each.value.deployment.image_name}:${each.value.deployment.image_tag}"
+  name = (each.value.deployment != null) ? "${each.value.deployment.image_name}:${each.value.deployment.image_tag}" : "${each.value.statefulset.image_name}:${each.value.statefulset.image_tag}"
   # The 'pull_trigger' ensures the image is pulled if it doesn't exist or if the source changes.
-  pull_triggers = [each.value.deployment.image_tag]
+  pull_triggers =  (each.value.deployment != null) ? [each.value.deployment.image_tag] : [each.value.statefulset.image_tag]
   depends_on = [
     kubectl_manifest.hera_rbac
   ]
 }
-
-# TODO: statefulset
 
 resource "null_resource" "rollout_trigger_deployment" {
   # Ensure the keys match those used in the kubectl_manifest (each.key)

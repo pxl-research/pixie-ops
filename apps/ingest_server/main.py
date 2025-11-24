@@ -44,32 +44,6 @@ def get_db_connection():
             detail=f"Database service unavailable: Could not connect to {DB_HOST}"
         )
 
-'''
-@app.on_event("startup")
-async def startup_event():
-    """Initializes the database table if it doesn't exist."""
-    conn = None
-    try:
-        conn = get_db_connection()
-        # Use a non-dictionary cursor for setup
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS flow_data (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR(100) NOT NULL,
-                    value NUMERIC(10, 2) NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-        conn.commit()
-        print("Database table 'flow_data' checked/created successfully.")
-    except Exception as e:
-        print(f"Error during database startup check: {e}")
-        # Note: Do not raise HTTPException in startup event, as it prevents app start
-    finally:
-        if conn:
-            conn.close()
-
 @app.post("/write-data", status_code=201)
 def write_data(data: DataItem):
     """
@@ -89,7 +63,6 @@ def write_data(data: DataItem):
         return {"status": "success", "message": "Data written to PostgreSQL successfully"}
 
     except HTTPException:
-        # Re-raise the connection error if it occurred
         raise
     except Exception as e:
         # Rollback the transaction on any other error
@@ -125,7 +98,6 @@ def read_data():
     finally:
         if conn:
             conn.close()
-'''
 
 
 @app.get("/")
