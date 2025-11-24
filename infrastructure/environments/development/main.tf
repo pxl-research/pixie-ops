@@ -37,6 +37,7 @@ module "development" {
   }
 
   app_configs = {
+    /*
     database_server = {
       metadata = {
         app_name        = "pixie-db"
@@ -66,6 +67,7 @@ module "development" {
         }
       }
     }
+    */
     ingest_server = {
       metadata = {
         app_name        = "pixie-ingest"
@@ -97,7 +99,7 @@ module "development" {
         #   X=""
         #   Y=""
         # }
-        depends_on      = ["pixie-db"]
+        depends_on      = [] # ["pixie-db"]
         # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
