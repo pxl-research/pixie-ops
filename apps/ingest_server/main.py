@@ -44,6 +44,12 @@ def get_db_connection():
             detail=f"Database service unavailable: Could not connect to {DB_HOST}"
         )
 
+'''
+curl -X POST \
+  http://localhost/ingest/write-data \
+  -H "Content-Type: application/json" \
+  -d '{"name": "flow_rate_a", "value": 12.5}'
+'''
 @app.post("/write-data", status_code=201)
 def write_data(data: DataItem):
     """
@@ -75,6 +81,9 @@ def write_data(data: DataItem):
             conn.close()
 
 
+'''
+curl http://localhost/ingest/read-data
+'''
 @app.get("/read-data", response_model=list[dict[str, Any]])
 def read_data():
     """
