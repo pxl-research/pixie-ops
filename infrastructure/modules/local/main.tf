@@ -382,20 +382,13 @@ resource "kubectl_manifest" "app_deployment" {
     readiness_probe_config = merge(local.default_readiness_probe, try(each.value.deployment.readiness_probe, {}))
 
     app_env = merge(
-      # Merge .env file contents and explicit 'environment' map
-      try(
-        # Map from env_file
-        each.value.deployment.env_file != null && each.value.deployment.dockerfile_path != null && each.value.deployment.docker_context != null ?
-          {
-            for line in split("\n", file("${each.value.deployment.dockerfile_path}/${each.value.deployment.env_file}")) :
-            # Split on the first '=' to handle values with multiple '='
-            trimspace(split("=", line, 2)[0]) => trim(split("=", line, 2)[1], "\" ")
-            if length(split("=", line, 2)) == 2 # Only process lines with exactly one '='
-          }
-          : {}
-        , {}
-      ),
-      # Explicit map from environment
+      {
+        for kv in regexall(
+          "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
+          file("${each.value.deployment.dockerfile_path}/${each.value.deployment.env_file}")
+        ) :
+        trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
+      },
       try(each.value.deployment.environment, {})
     )
     depends_on = try(each.value.deployment.depends_on, [])

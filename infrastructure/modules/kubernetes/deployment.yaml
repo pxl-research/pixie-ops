@@ -68,7 +68,7 @@ spec:
         env:
 %{ for key, value in app_env ~}
         - name: ${key}
-          value: "${value}"
+          value: ${value}
 %{ endfor ~}
 %{ endif ~}
 %{ if is_local_deployment == true }
