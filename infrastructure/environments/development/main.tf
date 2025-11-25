@@ -32,12 +32,13 @@ module "development" {
       name = "fast-storage"
       provisioner = "rancher.io/local-path"
       reclaim_policy = "Delete"
-      volume_binding_mode = "Immediate"
+      volume_binding_mode = "WaitForFirstConsumer"
     }
   }
 
   app_configs = {
     /*
+    */
     database_server = {
       metadata = {
         app_name        = "pixie-db"
@@ -47,7 +48,7 @@ module "development" {
       statefulset = {
         replica_count   = 1
         image_name      = "pixie-db"
-        image_tag       = "1.0.0"
+        image_tag       = "1.0.1"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/database_server"
         request_cpu     = "128m"
@@ -67,7 +68,6 @@ module "development" {
         }
       }
     }
-    */
     ingest_server = {
       metadata = {
         app_name        = "pixie-ingest"

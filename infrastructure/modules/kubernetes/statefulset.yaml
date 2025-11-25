@@ -61,9 +61,9 @@ spec:
         env:
 %{ for key, value in app_env ~}
         - name: ${key}
-          value: "${value}"
-%{ endfor }
-%{ endif }
+          value: ${value}
+%{ endfor ~}
+%{ endif ~}
         ports:
         - containerPort: ${target_port}
         # Resource requests and limits

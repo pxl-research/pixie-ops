@@ -107,6 +107,28 @@ resource "null_resource" "install_nginx_gateway" {
   ]
 }
 
+resource "null_resource" "install_local_path_provisioner" {
+  count = var.cluster_create ? 0 : 1
+
+  triggers = {
+    version = "v0.0.32"
+  }
+
+  provisioner "local-exec" {
+    command = "kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.32/deploy/local-path-storage.yaml && kubectl wait --for=condition=Available -n local-path-storage deployment/local-path-provisioner --timeout=300s"
+
+    environment = {
+      KUBECONFIG = local.kube_config_path
+    }
+  }
+
+  depends_on = [
+    kind_cluster.default,
+    kubectl_manifest.project_namespace[0]
+  ]
+}
+
+
 ########################################
 # HELM RELEASES
 ########################################
@@ -200,7 +222,8 @@ resource "kubectl_manifest" "hera_rbac" {
   depends_on = [
     # Reference the singular instances [0]
     helm_release.argo_workflows[0],
-    null_resource.install_nginx_gateway
+    null_resource.install_nginx_gateway,
+    null_resource.install_local_path_provisioner
   ]
 }
 
@@ -320,6 +343,8 @@ resource "kubectl_manifest" "storage_classes" {
     volume_binding_mode = each.value.volume_binding_mode
   })
 
+  wait = true
+
   depends_on = [
     null_resource.kind_image_load_app,
     null_resource.rollout_trigger
@@ -417,22 +442,34 @@ resource "kubectl_manifest" "app_statefulset" {
     readiness_probe_config = merge(local.default_readiness_probe, try(each.value.statefulset.readiness_probe, {}))
 
     app_env = merge(
-      # Merge .env file contents and explicit 'environment' map
-      try(
-        # Map from env_file
-        each.value.statefulset.env_file != null ?
-          {
-            for line in split("\n", file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")) :
-            # Split on the first '=' to handle values with multiple '='
-            trimspace(split("=", line, 2)[0]) => trim(split("=", line, 2)[1], "\" ")
-            if length(split("=", line, 2)) == 2 # Only process lines with exactly one '='
-          }
-          : {}
-        , {}
-      ),
-      # Explicit map from environment
+      {
+        for kv in regexall(
+          "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
+          file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")
+        ) :
+        trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
+      },
       try(each.value.statefulset.environment, {})
     )
+
+
+    #app_env = merge(
+    #  try(
+    #    # Process .env file
+    #    each.value.statefulset.env_file != null ?
+    #      {
+    #        for line in split("\n", file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")) :
+    #        # Check for non-empty lines with an equals sign
+    #        trimspace(split("=", line, 2)[0]) => trim(trimspace(split("=", line, 2)[1]), "\"")
+    #        if length(split("=", line, 2)) == 2 && length(trimspace(line)) > 0
+    #      }
+    #      : {}
+    #    , {}
+    #  ),
+    #  # Explicit map from 'environment' (highest precedence)
+    #  try(each.value.statefulset.environment, {})
+    #)
+
     depends_on = try(each.value.statefulset.depends_on, [])
   })
 
