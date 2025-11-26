@@ -399,9 +399,30 @@ resource "kubectl_manifest" "app_deployment" {
   depends_on = [
     null_resource.kind_image_load_app,
     null_resource.rollout_trigger_deployment,
-    kubectl_manifest.storage_classes
+    kubectl_manifest.storage_classes,
   ]
 }
+
+resource "kubectl_manifest" "app_statefulset_prestart_configmap" {
+  for_each = {
+    for k, v in var.app_configs : k => v
+    if !var.cluster_create && try(v.statefulset.pre_start_commands, []) != []
+  }
+
+  yaml_body = <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${replace(each.key, "_", "-")}-prestart
+  namespace: ${var.project_namespace_name}
+data:
+  prestart.sh: |
+%{ for cmd in each.value.statefulset.pre_start_commands ~}
+    ${cmd}
+%{ endfor ~}
+EOF
+}
+
 
 # 4c. Create Kubernetes StatefulSet for each app using for_each
 resource "kubectl_manifest" "app_statefulset" {
@@ -445,25 +466,8 @@ resource "kubectl_manifest" "app_statefulset" {
       try(each.value.statefulset.environment, {})
     )
 
-
-    #app_env = merge(
-    #  try(
-    #    # Process .env file
-    #    each.value.statefulset.env_file != null ?
-    #      {
-    #        for line in split("\n", file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")) :
-    #        # Check for non-empty lines with an equals sign
-    #        trimspace(split("=", line, 2)[0]) => trim(trimspace(split("=", line, 2)[1]), "\"")
-    #        if length(split("=", line, 2)) == 2 && length(trimspace(line)) > 0
-    #      }
-    #      : {}
-    #    , {}
-    #  ),
-    #  # Explicit map from 'environment' (highest precedence)
-    #  try(each.value.statefulset.environment, {})
-    #)
-
     depends_on = try(each.value.statefulset.depends_on, [])
+    pre_start_commands = try(each.value.statefulset.pre_start_commands, [])
   })
 
   wait = false
@@ -471,7 +475,8 @@ resource "kubectl_manifest" "app_statefulset" {
   depends_on = [
     null_resource.kind_image_load_app,
     null_resource.rollout_trigger_statefulset,
-    kubectl_manifest.storage_classes
+    kubectl_manifest.storage_classes,
+    kubectl_manifest.app_statefulset_prestart_configmap,
   ]
 }
 

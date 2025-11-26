@@ -48,7 +48,7 @@ module "development" {
       statefulset = {
         replica_count   = 1
         image_name      = "pixie-db"
-        image_tag       = "1.0.1"
+        image_tag       = "1.0.2"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/database_server"
         request_cpu     = "128m"
