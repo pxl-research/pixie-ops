@@ -44,6 +44,7 @@ variable "app_configs" {
     })
 
     deployment = optional(object({
+      wait_timeout            = optional(string, "30m")
       replica_count           = optional(number, 1)
       image_name              = string
       image_tag               = string
@@ -79,6 +80,7 @@ variable "app_configs" {
     }), null)
 
     statefulset = optional(object({
+      wait_timeout           = optional(string, "30m")
       replica_count          = optional(number, 1)
       image_name             = string
       image_tag              = string

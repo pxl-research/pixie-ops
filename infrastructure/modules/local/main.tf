@@ -395,6 +395,7 @@ resource "kubectl_manifest" "app_deployment" {
   })
 
   wait = false
+  wait_timeout = each.value.deployment.wait_timeout
 
   depends_on = [
     null_resource.kind_image_load_app,
@@ -450,6 +451,7 @@ resource "kubectl_manifest" "app_statefulset" {
   })
 
   wait = false
+  wait_timeout = each.value.statefulset.wait_timeout
 
   depends_on = [
     null_resource.kind_image_load_app,

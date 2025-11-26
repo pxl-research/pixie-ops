@@ -116,6 +116,13 @@ spec:
 %{ endfor }
 
   # Creates a PVC for each replica, based on the defined data_volumes map
+  # PVCs can be expanded but not shrunk, thus request only what you need.
+  # * Database Storage: Use StatefulSet with RWO PVCs. Each replica gets its own storage.
+  # * Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
+  # * Scratch Space: Use emptyDir for temporary data processing that doesn't need persistence; survives pod restart but not pod deletion.
+  # Choose the right reclaim policy:
+  # * Retain for production databases.
+  # * Delete for development and temporary data
   volumeClaimTemplates:
   %{ for name, volume in data_volumes }
   - metadata:

@@ -129,6 +129,9 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Test Qdrant (for different type of database or persistent storage).
+* Test embedding model (for GPU support).
+* Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * depends_on causes Err:ImageNeverPull for depended deployment
 * Make sure rebuilding works without having to change version number.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!
@@ -136,19 +139,6 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 * (What about images of multiple containers? Seems fine because split in multiple images.)
 * (Make environment variables overwrite what is in .env (in order to patch what is in pulled Docker image). Seems fine.)
 * Healthcheck for StatefulSet based on: https://github.com/pxl-research/pixie-tabular-db/blob/main/infra/docker/docker-compose.dev.yml
-* Create a StatefulSet example of a Postgres database pod that is accessed in the FastAPI pod.
-* Might look into simpler Dockerfile (no shared) to make example simpler.
-* storageclass.yaml: Create PersistentVolume for cluster via StorageClass for flexibility.
-    * Define different tiers (fast-ssd, slow-hdd, etc.)
-    * Let dynamic provisioning handle the details
-* statefulset.yaml: Use StatefulSet with PersistentVolumeClaims defined in it. PVCs can be expanded but not shrunk, thus request only what you need.
-  * Database Storage: Use StatefulSet with RWO PVCs. Each replica gets its own storage.
-  * Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
-  * Scratch Space: Use emptyDir for temporary data processing that doesn't need persistence; survives pod restart but not pod deletion.
-  * Choose the right reclaim policy:
-    * Retain for production databases.
-    * Delete for development and temporary data.
-* In production: port forwarding is probably not needed?
 
 Note: only use CI/CD to build containers when pushing to main.
 Changing production should be done by manually applying Terraform/OpenTofu.
