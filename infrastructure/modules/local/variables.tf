@@ -44,7 +44,7 @@ variable "app_configs" {
     })
 
     deployment = optional(object({
-      replica_count           = number
+      replica_count           = optional(number, 1)
       image_name              = string
       image_tag               = string
       docker_context          = optional(string, null)
@@ -79,7 +79,7 @@ variable "app_configs" {
     }), null)
 
     statefulset = optional(object({
-      replica_count          = number
+      replica_count          = optional(number, 1)
       image_name             = string
       image_tag              = string
       docker_context         = string

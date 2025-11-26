@@ -9,6 +9,9 @@ from psycopg2 import extras
 from pydantic import BaseModel, Field
 from hello_flow import HelloFlow  # Import your HelloFlow class
 
+from qdrant_client import QdrantClient
+# from sentence_transformers import SentenceTransformer
+
 # -----------------------------
 # In-memory workflow status store
 # -----------------------------
@@ -22,9 +25,32 @@ DB_USER = os.environ.get("POSTGRES_USER", "user")
 DB_PASS = os.environ.get("POSTGRES_PASSWORD", "password")
 DB_PORT = os.environ.get("POSTGRES_PORT", "5432")
 
+QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
+COLLECTION = os.getenv("QDRANT_COLLECTION", "pixie_vectors")
+MODEL_NAME = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+#embedder = SentenceTransformer(MODEL_NAME)
+VECTOR_SIZE = int(os.getenv("VECTOR_SIZE", 384))
+
+def dummy_embed(text: str) -> list[float]:
+    """
+    Constant test embedding.
+    Always returns the same vector to validate plumbing.
+    """
+    return [0.1] * VECTOR_SIZE
+
 class DataItem(BaseModel):
     name: str = Field(..., max_length=100)
     value: float
+
+class VectorItem(BaseModel):
+    text: str
+    metadata: dict = {}
+
+class SearchRequest(BaseModel):
+    query: str
+    limit: int = 5
 
 def get_db_connection():
     """Establishes and returns a psycopg2 connection object."""
@@ -108,6 +134,77 @@ def read_data():
     finally:
         if conn:
             conn.close()
+
+'''
+curl -X POST http://localhost/ingest/write-vector \
+-H "Content-Type: application/json" \
+-d '{
+  "text": "Pump A is running at 12.5 psi",
+  "metadata": {"sensor": "pump_a"}
+}'; echo
+'''
+@app.post("/write-vector", status_code=201)
+def write_vector(item: VectorItem):
+    try:
+        # vector = embedder.encode(item.text).tolist()
+        vector = dummy_embed(item.text)
+        point_id = str(uuid.uuid4())
+
+        qdrant_client.upsert(
+            collection_name=COLLECTION,
+            points=[
+                {
+                    "id": point_id,
+                    "vector": vector,
+                    "payload": {
+                        "text": item.text,
+                        "metadata": item.metadata
+                    }
+                }
+            ]
+        )
+
+        return {
+            "status": "success",
+            "id": point_id,
+            "message": "Vector written to Qdrant"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+'''
+curl -X POST http://localhost/ingest/search-vector \
+-H "Content-Type: application/json" \
+-d '{
+  "query": "pressure from pump",
+  "limit": 3
+}'; echo
+'''
+@app.post("/search-vectors")
+def search_vectors(data: SearchRequest):
+    try:
+        # query_vector = embedder.encode(data.query).tolist()
+        query_vector = dummy_embed(data.query)
+
+        results = qdrant_client.search(
+            collection_name=COLLECTION,
+            query_vector=query_vector,
+            limit=data.limit
+        )
+
+        return [
+            {
+                "id": hit.id,
+                "score": hit.score,
+                "text": hit.payload.get("text"),
+                "metadata": hit.payload.get("metadata"),
+            }
+            for hit in results
+        ]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/")
