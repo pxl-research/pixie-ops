@@ -5,6 +5,7 @@ import threading
 from typing import Any
 from fastapi import FastAPI, HTTPException, Response, status, BackgroundTasks
 import psycopg2 as pg
+from psycopg2 import extras
 from pydantic import BaseModel, Field
 from hello_flow import HelloFlow  # Import your HelloFlow class
 
@@ -28,7 +29,7 @@ class DataItem(BaseModel):
 def get_db_connection():
     """Establishes and returns a psycopg2 connection object."""
     try:
-        conn = psycopg2.connect(
+        conn = pg.connect(
             host=DB_HOST,
             database=DB_NAME,
             user=DB_USER,
@@ -48,7 +49,7 @@ def get_db_connection():
 curl -X POST \
   http://localhost/ingest/write-data \
   -H "Content-Type: application/json" \
-  -d '{"name": "flow_rate_a", "value": 12.5}'
+  -d '{"name": "flow_rate_a", "value": 12.5}'; echo
 '''
 @app.post("/write-data", status_code=201)
 def write_data(data: DataItem):
@@ -75,14 +76,14 @@ def write_data(data: DataItem):
         if conn:
             conn.rollback()
         print(f"Database write error: {e}")
-        raise HTTPException(status_code=500, detail=f"Database write failed: {e}")
+        raise HTTPException(500, detail=str(e))
     finally:
         if conn:
             conn.close()
 
 
 '''
-curl http://localhost/ingest/read-data
+curl http://localhost/ingest/read-data; echo
 '''
 @app.get("/read-data", response_model=list[dict[str, Any]])
 def read_data():
