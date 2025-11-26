@@ -10,8 +10,8 @@ terraform {
       version = "3.2.4"
     }
     kubectl = {
-      source  = "alekc/kubectl"
-      version = "2.1.3"
+      source  = "gavinbunney/kubectl" # "alekc/kubectl"
+      version = "1.19.0" # "2.1.3"
     }
     helm = {
       source  = "hashicorp/helm"
@@ -63,6 +63,8 @@ provider "helm" {
 # Kubectl provider
 provider "kubectl" {
   config_path = local.kube_config_path
+
+  apply_retry_count = 10
 }
 
 # Null provider

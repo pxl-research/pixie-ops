@@ -394,8 +394,7 @@ resource "kubectl_manifest" "app_deployment" {
     depends_on = try(each.value.deployment.depends_on, [])
   })
 
-  wait = false
-  wait_timeout = each.value.deployment.wait_timeout
+  wait = false # Important to avoid timeouts!!!
 
   depends_on = [
     null_resource.kind_image_load_app,
@@ -450,8 +449,7 @@ resource "kubectl_manifest" "app_statefulset" {
     depends_on = try(each.value.statefulset.depends_on, [])
   })
 
-  wait = false
-  wait_timeout = each.value.statefulset.wait_timeout
+  wait = false # Important to avoid timeouts!!!
 
   depends_on = [
     null_resource.kind_image_load_app,
@@ -522,20 +520,26 @@ resource "kubectl_manifest" "http_route" {
 ########################################
 # HERA BASE IMAGE LOAD
 ########################################
+resource "docker_image" "base" {
+  for_each = var.cluster_create ? {} : { for img in var.base_images_to_load : img => img }
+
+  name = each.value
+}
 resource "null_resource" "kind_image_load_base_images" {
-  # Use conditional set: empty set if true, set of images if false
-  for_each = var.cluster_create ? toset([]) : toset(var.base_images_to_load) # ensure images are unique
+  for_each = var.cluster_create ? {} : { for img in var.base_images_to_load : img => img }
 
   triggers = {
     image_name   = each.key
     cluster_name = var.cluster_name
   }
+
   provisioner "local-exec" {
-    command = "kind load docker-image ${each.value} --name ${var.cluster_name}"
+    command = "kind load docker-image ${docker_image.base[each.key].name} --name ${var.cluster_name}"
   }
 
   depends_on = [
+    kind_cluster.default,
+    docker_image.base,
     kubectl_manifest.http_route,
-    kind_cluster.default
   ]
 }
