@@ -94,7 +94,6 @@ variable "app_configs" {
       env_file               = optional(string, null)
       environment            = optional(map(string), {})
       depends_on             = optional(list(string), [])
-      pre_start_commands     = optional(list(string), [])
       liveness_probe = optional(object({
         path                  = optional(string, null)       # for httpGet
         command               = optional(list(string), null) # for exec (e.g., ["sh", "-c", "curl -f http://localhost:8000/livez || exit 1"])

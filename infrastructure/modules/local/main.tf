@@ -403,26 +403,6 @@ resource "kubectl_manifest" "app_deployment" {
   ]
 }
 
-resource "kubectl_manifest" "app_statefulset_prestart_configmap" {
-  for_each = {
-    for k, v in var.app_configs : k => v
-    if !var.cluster_create && try(v.statefulset.pre_start_commands, []) != []
-  }
-
-  yaml_body = <<EOF
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: ${replace(each.key, "_", "-")}-prestart
-  namespace: ${var.project_namespace_name}
-data:
-  prestart.sh: |
-%{ for cmd in each.value.statefulset.pre_start_commands ~}
-    ${cmd}
-%{ endfor ~}
-EOF
-}
-
 
 # 4c. Create Kubernetes StatefulSet for each app using for_each
 resource "kubectl_manifest" "app_statefulset" {
@@ -467,7 +447,6 @@ resource "kubectl_manifest" "app_statefulset" {
     )
 
     depends_on = try(each.value.statefulset.depends_on, [])
-    pre_start_commands = try(each.value.statefulset.pre_start_commands, [])
   })
 
   wait = false
@@ -476,7 +455,6 @@ resource "kubectl_manifest" "app_statefulset" {
     null_resource.kind_image_load_app,
     null_resource.rollout_trigger_statefulset,
     kubectl_manifest.storage_classes,
-    kubectl_manifest.app_statefulset_prestart_configmap,
   ]
 }
 
