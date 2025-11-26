@@ -129,6 +129,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Timeout bypassing by avoiding Tofu provider for kubectl and directly apply with a timeout parameter.
 * Test Qdrant (for different type of database or persistent storage).
 * Test embedding model (for GPU support).
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.

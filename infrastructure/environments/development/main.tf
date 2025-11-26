@@ -42,15 +42,15 @@ module "development" {
     database_server = {
       metadata = {
         app_name        = "pixie-db"
-        target_port     = 6333 # 5432
-        service_port    = 6333 # 5432
+        target_port     = 5432 # 6333
+        service_port    = 5432 # 6333
       }
       statefulset = {
         replica_count   = 1
         image_name      = "pixie-db"
         image_tag       = "1.0.2"
         docker_context  = local.apps_path
-        dockerfile_path = "${local.apps_path}/vector_server" #"${local.apps_path}/database_server"
+        dockerfile_path = "${local.apps_path}/database_server" # "${local.apps_path}/vector_server"
         request_cpu     = "128m"
         request_memory  = "128Mi"
         limit_cpu       = "256m"
@@ -59,8 +59,8 @@ module "development" {
         env_file        = ".env" # Path starting relatively from Dockerfile path
         data_volumes = {
           pgdata = {
-            name               = "qdrant_data" # "pgdata"
-            mount_path         = "/qdrant/storage" # "/var/lib/app/data"
+            name               = "pgdata" # "qdrant_data"
+            mount_path         = "/var/lib/app/data" # "/qdrant/storage"
             storage_request    = "1Gi"
             storage_class_name = "fast-storage"
             access_mode        = "ReadWriteOnce"
