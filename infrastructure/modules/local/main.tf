@@ -382,13 +382,21 @@ resource "kubectl_manifest" "app_deployment" {
     readiness_probe_config = merge(local.default_readiness_probe, try(each.value.deployment.readiness_probe, {}))
 
     app_env = merge(
-      {
-        for kv in regexall(
-          "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
-          file("${each.value.deployment.dockerfile_path}/${each.value.deployment.env_file}")
-        ) :
-        trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
-      },
+      // Conditional map creation
+      (
+        each.value.deployment.env_file != null
+        ? {
+          # TRUE path: Execute the complex regex parsing and mapping
+          for kv in regexall(
+            "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
+            file("${each.value.deployment.dockerfile_path}/${each.value.deployment.env_file}")
+          ) :
+          trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
+        }
+      : {}
+        # FALSE path: Return an empty map if env_file is null or empty
+      ),
+      // Always merge with the explicit 'environment' variables, if they exist
       try(each.value.deployment.environment, {})
     )
     depends_on = try(each.value.deployment.depends_on, [])
@@ -436,13 +444,21 @@ resource "kubectl_manifest" "app_statefulset" {
     readiness_probe_config = merge(local.default_readiness_probe, try(each.value.statefulset.readiness_probe, {}))
 
     app_env = merge(
-      {
-        for kv in regexall(
-          "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
-          file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")
-        ) :
-        trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
-      },
+      // Conditional map creation
+      (
+        each.value.statefulset.env_file != null
+        ? {
+          # TRUE path: Execute the complex regex parsing and mapping
+          for kv in regexall(
+            "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
+            file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")
+          ) :
+          trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
+        }
+      : {}
+        # FALSE path: Return an empty map if env_file is null or empty
+      ),
+      // Always merge with the explicit 'environment' variables, if they exist
       try(each.value.statefulset.environment, {})
     )
 

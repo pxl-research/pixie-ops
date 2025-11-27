@@ -112,7 +112,6 @@ variable "app_configs" {
         failure_threshold     = optional(number, 2)
       }), null)
       data_volumes = map(object({
-        name               = string
         mount_path         = string
         storage_request    = string
         storage_class_name = string

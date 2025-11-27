@@ -38,19 +38,18 @@ module "development" {
 
   app_configs = {
     /*
-    */
     database_server = {
       metadata = {
         app_name        = "pixie-db"
-        target_port     = 5432 # 6333
-        service_port    = 5432 # 6333
+        target_port     = 6333 # 5432
+        service_port    = 6333 # 5432
       }
       statefulset = {
         replica_count   = 1
         image_name      = "pixie-db"
         image_tag       = "1.0.2"
         docker_context  = local.apps_path
-        dockerfile_path = "${local.apps_path}/database_server" # "${local.apps_path}/vector_server"
+        dockerfile_path = "${local.apps_path}/database_server"
         request_cpu     = "128m"
         request_memory  = "128Mi"
         limit_cpu       = "256m"
@@ -58,9 +57,8 @@ module "development" {
         restart         = "Always"
         env_file        = ".env" # Path starting relatively from Dockerfile path
         data_volumes = {
-          pgdata = {
-            name               = "pgdata" # "qdrant_data"
-            mount_path         = "/var/lib/app/data" # "/qdrant/storage"
+          pgdata = { # Only a-z, A-Z, digits and - allowed
+            mount_path         = "/var/lib/app/data"
             storage_request    = "1Gi"
             storage_class_name = "fast-storage"
             access_mode        = "ReadWriteOnce"
@@ -68,6 +66,37 @@ module "development" {
         }
       }
     }
+    */
+    /**/
+    vector_server = {
+      metadata = {
+        app_name        = "pixie-vector-db"
+        target_port     = 6333
+        service_port    = 6333
+      }
+      statefulset = {
+        replica_count   = 1
+        image_name      = "pixie-vector-db"
+        image_tag       = "1.0.2"
+        docker_context  = local.apps_path
+        dockerfile_path = "${local.apps_path}/vector_server"
+        request_cpu     = "500m"
+        request_memory  = "1Gi"
+        limit_cpu       = "1000m"
+        limit_memory    = "4Gi"
+        restart         = "Always"
+        data_volumes = {
+          qdrant-data = { # Only a-z, A-Z, digits and - allowed
+            mount_path         = "/qdrant/storage"
+            storage_request    = "1Gi"
+            storage_class_name = "fast-storage"
+            access_mode        = "ReadWriteOnce"
+          }
+        }
+      }
+    }
+
+    /**/
     ingest_server = {
       metadata = {
         app_name        = "pixie-ingest"
@@ -85,7 +114,7 @@ module "development" {
 
         # Local Docker apps
         image_name      = "pixie-ingest"
-        image_tag       = "1.0.1"
+        image_tag       = "1.0.3"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
         request_cpu     = "128m"

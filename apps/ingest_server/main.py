@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from hello_flow import HelloFlow  # Import your HelloFlow class
 
 from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct, CountRequest
 # from sentence_transformers import SentenceTransformer
 
 # -----------------------------
@@ -29,9 +30,14 @@ QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
 COLLECTION = os.getenv("QDRANT_COLLECTION", "pixie_vectors")
 MODEL_NAME = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-#embedder = SentenceTransformer(MODEL_NAME)
 VECTOR_SIZE = int(os.getenv("VECTOR_SIZE", 384))
+qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+if COLLECTION not in qdrant_client.get_collections().collections:
+    qdrant_client.create_collection(
+        collection_name=COLLECTION,
+        vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.DOT),
+    )
+#embedder = SentenceTransformer(MODEL_NAME)
 
 def dummy_embed(text: str) -> list[float]:
     """
@@ -152,15 +158,9 @@ def write_vector(item: VectorItem):
 
         qdrant_client.upsert(
             collection_name=COLLECTION,
+            wait=True,
             points=[
-                {
-                    "id": point_id,
-                    "vector": vector,
-                    "payload": {
-                        "text": item.text,
-                        "metadata": item.metadata
-                    }
-                }
+                PointStruct(id=point_id, vector=vector, payload={"text": item.text, "metadata": item.metadata}),
             ]
         )
 
@@ -174,7 +174,7 @@ def write_vector(item: VectorItem):
         raise HTTPException(status_code=500, detail=str(e))
 
 '''
-curl -X POST http://localhost/ingest/search-vector \
+curl -X POST http://localhost/ingest/search-vectors \
 -H "Content-Type: application/json" \
 -d '{
   "query": "pressure from pump",
@@ -187,21 +187,14 @@ def search_vectors(data: SearchRequest):
         # query_vector = embedder.encode(data.query).tolist()
         query_vector = dummy_embed(data.query)
 
-        results = qdrant_client.search(
+        search_result = qdrant_client.query_points(
             collection_name=COLLECTION,
-            query_vector=query_vector,
-            limit=data.limit
-        )
+            query=query_vector,
+            with_payload=True,
+            limit=3
+        ).points
 
-        return [
-            {
-                "id": hit.id,
-                "score": hit.score,
-                "text": hit.payload.get("text"),
-                "metadata": hit.payload.get("metadata"),
-            }
-            for hit in results
-        ]
+        return search_result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -111,7 +111,7 @@ spec:
         # Dynamically injects all defined volume mounts
         volumeMounts:
 %{ for name, volume in data_volumes }
-        - name: ${volume.name}
+        - name: ${name}
           mountPath: ${volume.mount_path}
 %{ endfor }
 
@@ -126,7 +126,7 @@ spec:
   volumeClaimTemplates:
   %{ for name, volume in data_volumes }
   - metadata:
-      name: ${volume.name}
+      name: ${name}
     spec:
       storageClassName: ${volume.storage_class_name}
       accessModes: ["${volume.access_mode}"] # e.g., ReadWriteOnce

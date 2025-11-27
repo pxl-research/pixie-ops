@@ -129,12 +129,10 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Timeout bypassing by avoiding Tofu provider for kubectl and directly apply with a timeout parameter.
-* Test Qdrant (for different type of database or persistent storage).
+* Fix: Make sure rebuilding works without having to change version number.
+* Fix: depends_on causes Err:ImageNeverPull for depended deployment
 * Test embedding model (for GPU support).
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
-* depends_on causes Err:ImageNeverPull for depended deployment
-* Make sure rebuilding works without having to change version number.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!
 * How can we pull from GHCR and provide a key for private repo's?
 * (What about images of multiple containers? Seems fine because split in multiple images.)
