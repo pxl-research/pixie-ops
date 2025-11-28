@@ -376,6 +376,25 @@ locals {
   }
 }
 
+# 5. Create Kubernetes Service for each app using for_each
+resource "kubectl_manifest" "app_service" {
+  # Use conditional map: empty map if true, app_configs if false
+  for_each = var.cluster_create ? {} : var.app_configs
+
+  yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
+    app_name            = each.value.metadata.app_name
+    namespace_name      = var.project_namespace_name
+    is_local_deployment = var.is_local_deployment
+    target_port         = each.value.metadata.target_port
+    service_port        = each.value.metadata.service_port
+  })
+  depends_on = [
+    null_resource.kind_image_load_app,
+    null_resource.rollout_trigger_deployment,
+    null_resource.rollout_trigger_statefulset,
+    kubectl_manifest.storage_classes,
+  ]
+}
 
 # 4b. Create Kubernetes Deployment for each app using for_each
 resource "kubectl_manifest" "app_deployment" {
@@ -432,89 +451,69 @@ resource "kubectl_manifest" "app_deployment" {
   wait = false # Important to avoid timeouts!!!
 
   depends_on = [
-    null_resource.kind_image_load_app,
-    null_resource.rollout_trigger_deployment,
-    kubectl_manifest.storage_classes,
+    kubectl_manifest.app_service,
   ]
 }
 
 
 # 4c. Create Kubernetes StatefulSet for each app using for_each
 resource "kubectl_manifest" "app_statefulset" {
-  # Filter the map to only include apps that have a statefulset config AND cluster_create is false
   for_each = {
     for k, v in var.app_configs : k => v
     if !var.cluster_create && try(v.statefulset, null) != null
   }
 
-  yaml_body = templatefile("${var.k8s_base_path}/statefulset.yaml", {
-    app_name               = each.value.metadata.app_name
-    namespace_name         = var.project_namespace_name
-    is_local_deployment    = var.is_local_deployment
-    target_port            = each.value.metadata.target_port
-    image_name             = each.value.statefulset.image_name
-    image_tag              = each.value.statefulset.image_tag
-    rollout_trigger        = null_resource.rollout_trigger_statefulset[each.key].triggers.app_source_hash
-    image_pull_secret_name = ""
-    replica_count          = each.value.statefulset.replica_count
-    request_cpu            = each.value.statefulset.request_cpu
-    request_memory         = each.value.statefulset.request_memory
-    limit_cpu              = each.value.statefulset.limit_cpu
-    limit_memory           = each.value.statefulset.limit_memory
-    data_volumes           = each.value.statefulset.data_volumes
-    restart                = each.value.statefulset.restart
-    platform_os            = each.value.statefulset.platform_os
-    platform_architecture  = each.value.statefulset.platform_architecture
-
-    # Merge user-defined probe config with defaults
-    liveness_probe_config = merge(local.default_liveness_probe, try(each.value.statefulset.liveness_probe, {}))
-    readiness_probe_config = merge(local.default_readiness_probe, try(each.value.statefulset.readiness_probe, {}))
-
-    app_env = merge(
-      // Conditional map creation
-      (
+  yaml_body = join("\n---\n", [
+    # StatefulSet YAML
+    templatefile("${var.k8s_base_path}/statefulset.yaml", {
+      app_name               = each.value.metadata.app_name
+      namespace_name         = var.project_namespace_name
+      is_local_deployment    = var.is_local_deployment
+      target_port            = each.value.metadata.target_port
+      image_name             = each.value.statefulset.image_name
+      image_tag              = each.value.statefulset.image_tag
+      rollout_trigger        = null_resource.rollout_trigger_statefulset[each.key].triggers.app_source_hash
+      image_pull_secret_name = ""
+      replica_count          = each.value.statefulset.replica_count
+      request_cpu            = each.value.statefulset.request_cpu
+      request_memory         = each.value.statefulset.request_memory
+      limit_cpu              = each.value.statefulset.limit_cpu
+      limit_memory           = each.value.statefulset.limit_memory
+      data_volumes           = each.value.statefulset.data_volumes
+      restart                = each.value.statefulset.restart
+      platform_os            = each.value.statefulset.platform_os
+      platform_architecture  = each.value.statefulset.platform_architecture
+      liveness_probe_config  = merge(local.default_liveness_probe, try(each.value.statefulset.liveness_probe, {}))
+      readiness_probe_config = merge(local.default_readiness_probe, try(each.value.statefulset.readiness_probe, {}))
+      app_env                = merge(
         each.value.statefulset.env_file != null
         ? {
-          # TRUE path: Execute the complex regex parsing and mapping
-          for kv in regexall(
-            "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
-            file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")
-          ) :
-          trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
-        }
-      : {}
-        # FALSE path: Return an empty map if env_file is null or empty
-      ),
-      // Always merge with the explicit 'environment' variables, if they exist
-      try(each.value.statefulset.environment, {})
-    )
+            for kv in regexall(
+              "(?m)^([A-Za-z_][A-Za-z0-9_]*)=(.*)$",
+              file("${each.value.statefulset.dockerfile_path}/${each.value.statefulset.env_file}")
+            ) : trim(kv[0], " ") => replace(trim(kv[1], " "), "^\"|\"$", "")
+          }
+        : {},
+        try(each.value.statefulset.environment, {})
+      )
+      depends_on_details = try(local.depends_on_details[each.key], {})
+    }),
 
-    # depends_on = try(each.value.statefulset.depends_on, [])
-    depends_on_details = try(local.depends_on_details[each.key], {})
-  })
+    # Service YAML
+    templatefile("${var.k8s_base_path}/service.yaml", {
+      app_name            = each.value.metadata.app_name
+      namespace_name      = var.project_namespace_name
+      is_local_deployment = var.is_local_deployment
+      target_port         = each.value.metadata.target_port
+      service_port        = each.value.metadata.service_port
+    })
+  ])
 
-  wait = false # Important to avoid timeouts!!!
+  wait = false
 
   depends_on = [
-    null_resource.kind_image_load_app,
-    null_resource.rollout_trigger_statefulset,
-    kubectl_manifest.storage_classes,
+    kubectl_manifest.app_service,
   ]
-}
-
-# 5. Create Kubernetes Service for each app using for_each
-resource "kubectl_manifest" "app_service" {
-  # Use conditional map: empty map if true, app_configs if false
-  for_each = var.cluster_create ? {} : var.app_configs
-
-  yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
-    app_name            = each.value.metadata.app_name
-    namespace_name      = var.project_namespace_name
-    is_local_deployment = var.is_local_deployment
-    target_port         = each.value.metadata.target_port
-    service_port        = each.value.metadata.service_port
-  })
-  depends_on = [kubectl_manifest.app_deployment, kubectl_manifest.app_statefulset]
 }
 
 # 6. Create Kubernetes Ingress for each app that has ingress enabled
