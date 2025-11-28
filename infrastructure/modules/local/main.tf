@@ -351,6 +351,32 @@ resource "kubectl_manifest" "storage_classes" {
   ]
 }
 
+locals {
+  get_dep_ready_path = {
+    for dep_app_name, dep_config in var.app_configs :
+    dep_app_name => (
+      try(dep_config.deployment.readiness_probe.path, null) != null ? dep_config.deployment.readiness_probe.path :
+      try(dep_config.statefulset.readiness_probe.path, null) != null ? dep_config.statefulset.readiness_probe.path :
+      "/readyz"
+    )
+  }
+
+  depends_on_details = {
+    for app_name, app_cfg in var.app_configs :
+    app_name => {
+      for dep_app_name, dep_override in try(app_cfg.deployment.depends_on, {}) :
+      dep_app_name => merge(
+        {
+          service_port = var.app_configs[dep_app_name].metadata.service_port
+          ready_path   = local.get_dep_ready_path[dep_app_name]
+        },
+        dep_override
+      )
+    }
+  }
+}
+
+
 # 4b. Create Kubernetes Deployment for each app using for_each
 resource "kubectl_manifest" "app_deployment" {
   # Filter the map to only include apps that have a deployment config AND cluster_create is false
@@ -399,7 +425,8 @@ resource "kubectl_manifest" "app_deployment" {
       // Always merge with the explicit 'environment' variables, if they exist
       try(each.value.deployment.environment, {})
     )
-    depends_on = try(each.value.deployment.depends_on, [])
+    # depends_on = try(each.value.deployment.depends_on, [])
+    depends_on_details = try(local.depends_on_details[each.key], {})
   })
 
   wait = false # Important to avoid timeouts!!!
@@ -462,7 +489,8 @@ resource "kubectl_manifest" "app_statefulset" {
       try(each.value.statefulset.environment, {})
     )
 
-    depends_on = try(each.value.statefulset.depends_on, [])
+    # depends_on = try(each.value.statefulset.depends_on, [])
+    depends_on_details = try(local.depends_on_details[each.key], {})
   })
 
   wait = false # Important to avoid timeouts!!!

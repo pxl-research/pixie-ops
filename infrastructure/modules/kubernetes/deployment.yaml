@@ -48,17 +48,36 @@ spec:
       imagePullSecrets:
       - name: ${image_pull_secret_name}
 %{ endif }
-%{ if length(depends_on) > 0 }
+%{ if length(depends_on_details) > 0 }
       initContainers:
-%{ for dep_app_name in depends_on }
+%{ for dep_app_name, dep_details in depends_on_details }
       - name: wait-for-${dep_app_name}
-        image: busybox:1.36
-%{ if is_local_deployment == true }
-        imagePullPolicy: Never
+        image: busybox:1.37
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '-c', '
+          export TARGET_PORT=${coalesce(dep_details.check_port, dep_details.service_port, "80")};
+          export FQDN=${dep_app_name}-svc.${namespace_name}.svc.cluster.local;
+%{ if try(dep_details.exec_command, null) != null }
+          until ${join(" ", coalesce(dep_details.exec_command, []))} $FQDN $TARGET_PORT; do
+            echo "Waiting (EXEC) for service ${dep_app_name} on port $TARGET_PORT...";
+            sleep 5;
+          done;
 %{ else }
-        imagePullPolicy: Always
+%{ if try(dep_details.http_path, null) != null }
+          export READY_PATH=${coalesce(dep_details.http_path, dep_details.ready_path, "/readyz")};
+          until wget -q -O /dev/null http://$FQDN:$TARGET_PORT$READY_PATH; do
+            echo "Waiting (HTTP) for readiness probe on $FQDN:$TARGET_PORT$READY_PATH...";
+            sleep 5;
+          done;
+%{ else }
+          while ! nc -z $FQDN $TARGET_PORT; do
+            echo "Waiting (NC) for network access on $FQDN:$TARGET_PORT...";
+            sleep 5;
+          done;
 %{ endif }
-        command: ['sh', '-c', 'until wget -qO- ${dep_app_name}.${namespace_name}.svc.cluster.local > /dev/null; do echo "Waiting for ${dep_app_name} service..."; sleep 5; done']
+%{ endif }
+          echo "Service ${dep_app_name} is reachable.";
+        ']
 %{ endfor }
 %{ endif }
       containers:

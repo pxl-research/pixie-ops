@@ -129,8 +129,9 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Fix: depends_on causes Init:0/1 for depended deployment because the Service does not yet exist.
+=> Fix this by merging Deployment-Service and StatefulSet-Service resources instead of Deployment/StatefulSet, Service.
 * Fix: Make sure rebuilding works without having to change version number.
-* Fix: depends_on causes Err:ImageNeverPull for depended deployment
 * Test embedding model (for GPU support).
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!

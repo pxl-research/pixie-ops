@@ -58,7 +58,20 @@ variable "app_configs" {
       restart                 = optional(string, "Always")
       env_file                = optional(string, null)
       environment             = optional(map(string), {})
-      depends_on              = optional(list(string), [])
+      # depends_on              = optional(list(string), [])
+      depends_on = optional(map(object({
+        # The key of this map is the name of the dependent app (e.g., "vector_server").
+        # The value is the configuration for the Init Container's check.
+
+        # The port to check on the dependency. Defaults to the dependency's service_port.
+        check_port: optional(number),
+
+        # If provided, use this HTTP path (e.g., "/health"). This implies an HTTP check.
+        http_path: optional(string),
+
+        # If provided, use this command array (e.g., ["nc", "-z"]). This implies an EXEC check.
+        exec_command: optional(list(string)),
+      })), {})
       liveness_probe = optional(object({
         path                  = optional(string, null)       # for httpGet
         command               = optional(list(string), null) # for exec (e.g., ["sh", "-c", "curl -f http://localhost:8000/livez || exit 1"])
@@ -93,7 +106,20 @@ variable "app_configs" {
       restart                = optional(string, "Always")
       env_file               = optional(string, null)
       environment            = optional(map(string), {})
-      depends_on             = optional(list(string), [])
+      # depends_on             = optional(list(string), [])
+      depends_on = optional(map(object({
+        # The key of this map is the name of the dependent app (e.g., "vector_server").
+        # The value is the configuration for the Init Container's check.
+
+        # The port to check on the dependency. Defaults to the dependency's service_port.
+        check_port: optional(number),
+
+        # If provided, use this HTTP path (e.g., "/health"). This implies an HTTP check.
+        http_path: optional(string),
+
+        # If provided, use this command array (e.g., ["nc", "-z"]). This implies an EXEC check.
+        exec_command: optional(list(string)),
+      })), {})
       liveness_probe = optional(object({
         path                  = optional(string, null)       # for httpGet
         command               = optional(list(string), null) # for exec (e.g., ["sh", "-c", "curl -f http://localhost:8000/livez || exit 1"])

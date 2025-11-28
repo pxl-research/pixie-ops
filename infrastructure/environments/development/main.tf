@@ -68,7 +68,7 @@ module "development" {
     }
     */
     /**/
-    vector_server = {
+    pixie-vector-db = {
       metadata = {
         app_name        = "pixie-vector-db"
         target_port     = 6333
@@ -97,7 +97,7 @@ module "development" {
     }
 
     /**/
-    ingest_server = {
+    pixie-ingest = {
       metadata = {
         app_name        = "pixie-ingest"
         target_port     = 8080
@@ -128,7 +128,7 @@ module "development" {
         #   X=""
         #   Y=""
         # }
-        depends_on      = [] # ["pixie-db"]
+        depends_on = { pixie-vector-db = { http_path = "/readyz" } }
         # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
