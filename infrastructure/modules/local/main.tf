@@ -25,17 +25,18 @@ locals {
     for k, v in var.app_configs : k =>
     # Recursively get all files in the Docker build context
     sha1(join("", [
-      for f in fileset(v.deployment.docker_context, "**") :
+      for f in sort(fileset(v.deployment.docker_context, "**")) :
       # Compute and join the MD5 hash of each file
       filemd5("${v.deployment.docker_context}/${f}")
     ]))
     if !var.cluster_create && try(v.deployment, null) != null && try(v.deployment.docker_context, null) != null
   }
+
   app_file_hashes_statefulset = {
     for k, v in var.app_configs : k =>
     # Recursively get all files in the Docker build context
     sha1(join("", [
-      for f in fileset(v.statefulset.docker_context, "**") :
+      for f in sort(fileset(v.statefulset.docker_context, "**")) :
       # Compute and join the MD5 hash of each file
       filemd5("${v.statefulset.docker_context}/${f}")
     ]))
@@ -246,6 +247,13 @@ resource "docker_image" "app" {
     dockerfile = (each.value.deployment != null) ? "${each.value.deployment.dockerfile_path}/Dockerfile"  : "${each.value.statefulset.dockerfile_path}/Dockerfile"
   }
 
+  triggers = {
+    source_hash = coalesce(
+      try(local.app_file_hashes_deployment[each.key], null),
+      try(local.app_file_hashes_statefulset[each.key], null)
+    )
+  }
+
   depends_on = [
     kubectl_manifest.hera_rbac
   ]
@@ -452,6 +460,7 @@ resource "kubectl_manifest" "app_deployment" {
 
   depends_on = [
     kubectl_manifest.app_service,
+    null_resource.rollout_trigger_deployment
   ]
 }
 
@@ -513,6 +522,7 @@ resource "kubectl_manifest" "app_statefulset" {
 
   depends_on = [
     kubectl_manifest.app_service,
+    null_resource.rollout_trigger_statefulset
   ]
 }
 
@@ -585,4 +595,12 @@ resource "null_resource" "kind_image_load_base_images" {
     docker_image.base,
     kubectl_manifest.http_route,
   ]
+}
+
+output "file_hashes_deployment" {
+  value = local.app_file_hashes_deployment
+}
+
+output "file_hashes_statefulset" {
+  value = local.app_file_hashes_statefulset
 }

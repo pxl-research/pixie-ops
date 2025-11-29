@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Response, status, BackgroundTasks
 import psycopg2 as pg
 from psycopg2 import extras
 from pydantic import BaseModel, Field
-from hello_flow import HelloFlow  # Import your HelloFlow class
+from hello_flow import HelloFlow
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, CountRequest
@@ -126,13 +126,12 @@ def read_data():
     records = []
     try:
         conn = get_db_connection()
-        # Use RealDictCursor to fetch results as dictionaries instead of tuples
+        # RealDictCursor to fetch results as dictionaries instead of tuples
         with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
             cur.execute("SELECT id, name, value, created_at FROM flow_data ORDER BY created_at DESC;")
             records = cur.fetchall()
         return records
     except HTTPException:
-        # Re-raise the connection error if it occurred
         raise
     except Exception as e:
         print(f"Database read error: {e}")
@@ -258,7 +257,7 @@ def livez(response: Response) -> dict[str, str]:
 
 @app.get("/readyz")
 def readyz(response: Response) -> dict[str, str]:
-    # NOTE: Include result status based on other dependencies such as databases.
+    # NOTE: Here you put result status based on other dependencies such as databases.
     global is_healthy
     if is_healthy:
         response.status_code = 200
