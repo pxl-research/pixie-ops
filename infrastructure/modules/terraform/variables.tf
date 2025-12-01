@@ -4,6 +4,12 @@ variable "cluster_create" {
   default     = false
 }
 
+variable "deployment_target" {
+  description = "Deployment target. Can be 'local' or 'azure'."
+  type        = string
+  default     = "local"
+}
+
 variable "cluster_name" {
   description = "The name to assign to the Kubernetes cluster (e.g., kind cluster name)."
   type        = string

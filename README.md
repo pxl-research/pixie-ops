@@ -92,9 +92,9 @@ TODO
 TODO
 ```
 
-## Development: local deployment on minikube
+## Development: local deployment on kind
 ```
-cd infrastructure/environments/development
+cd infrastructure/
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan

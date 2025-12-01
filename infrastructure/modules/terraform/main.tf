@@ -45,7 +45,7 @@ locals {
 }
 
 resource "kind_cluster" "default" {
-  count           = 1
+  count           = var.deployment_target == "local" ? 1 : 0
   name            = var.cluster_name
   kubeconfig_path = local.kube_config_path
   wait_for_ready  = true
@@ -69,6 +69,26 @@ resource "kind_cluster" "default" {
   }
 }
 
+# TODO: alternative cluster for Azure
+
+resource "null_resource" "cluster_dependency" {
+  count = var.deployment_target == "local" ? 1 : 0
+
+  # This is where the dependency is created.
+  depends_on = [
+    kind_cluster.default
+  ]
+}
+
+resource "null_resource" "cluster_dependency_azure" {
+  count = var.deployment_target == "azure" ? 1 : 0
+
+  # This is where the dependency is created.
+  depends_on = [
+    kind_cluster.default # TODO: change to Azure variant
+  ]
+}
+
 resource "kubectl_manifest" "project_namespace" {
   # Only create this resource when the cluster is NOT being created in this run.
   count = var.cluster_create ? 0 : 1
@@ -78,7 +98,8 @@ resource "kubectl_manifest" "project_namespace" {
   })
 
   depends_on = [
-    kind_cluster.default # Dependency remains, but is satisfied or skipped based on count
+    null_resource.cluster_dependency,
+    null_resource.cluster_dependency_azure
   ]
 }
 
@@ -90,9 +111,6 @@ resource "null_resource" "install_nginx_gateway" {
   }
 
   provisioner "local-exec" {
-    # 1. Removed all \ line continuations to fix hidden character issues.
-    # 2. Fixed 'kubectl wait' resource name.
-    # 3. Corrected and escaped the patch JSON payload.
     command = <<-EOT
       kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=${local.nginx_gateway_version}" | kubectl apply -f - && kubectl apply --server-side -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/crds.yaml && kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/${local.nginx_gateway_version}/deploy/nodeport/deploy.yaml && kubectl wait --namespace nginx-gateway --for=condition=Available deployment/nginx-gateway --timeout=300s && kubectl patch nginxproxy nginx-gateway-proxy-config -n nginx-gateway --type='merge' -p='{"spec":{"kubernetes":{"service":{"nodePorts":[{"port":31007,"listenerPort":${var.ingress_port}}]}}}}'
     EOT
@@ -103,14 +121,12 @@ resource "null_resource" "install_nginx_gateway" {
   }
 
   depends_on = [
-    kind_cluster.default,
     kubectl_manifest.project_namespace[0]
   ]
 }
 
 resource "null_resource" "install_local_path_provisioner" {
-  count = var.cluster_create ? 0 : 1
-
+  count = (!var.cluster_create && var.deployment_target == "local") ? 1 : 0
   triggers = {
     version = "v0.0.32"
   }
@@ -124,7 +140,8 @@ resource "null_resource" "install_local_path_provisioner" {
   }
 
   depends_on = [
-    kind_cluster.default,
+    null_resource.cluster_dependency,
+    null_resource.cluster_dependency_azure,
     kubectl_manifest.project_namespace[0]
   ]
 }
@@ -306,7 +323,8 @@ resource "null_resource" "rollout_trigger_statefulset" {
 
 # 2. Load the image into Kind for each app using for_each
 resource "null_resource" "kind_image_load_app" {
-  for_each = var.cluster_create ? {} : var.app_configs
+  for_each = (!var.cluster_create && var.deployment_target == "local") ? merge(docker_image.app, docker_image.remote_app) : {}
+  #for_each = (var.cluster_create) ? {} : var.app_configs
 
   triggers = {
     # Safe lookup for the ID (ensures image is ready)
@@ -322,7 +340,7 @@ resource "null_resource" "kind_image_load_app" {
   }
 
   depends_on = [
-    kind_cluster.default,
+    kubectl_manifest.project_namespace[0],
     docker_image.app,
     docker_image.remote_app,
   ]
@@ -336,7 +354,10 @@ resource "null_resource" "rollout_trigger" {
   triggers = {
     timestamp = timestamp()
   }
-  depends_on = [null_resource.kind_image_load_app]
+  depends_on = [
+    null_resource.cluster_dependency,
+    null_resource.cluster_dependency_azure
+  ]
 }
 
 # 4a. Create Kubernetes StorageClass list
@@ -354,7 +375,8 @@ resource "kubectl_manifest" "storage_classes" {
   wait = true
 
   depends_on = [
-    null_resource.kind_image_load_app,
+    null_resource.cluster_dependency,
+    null_resource.cluster_dependency_azure,
     null_resource.rollout_trigger
   ]
 }
@@ -397,7 +419,9 @@ resource "kubectl_manifest" "app_service" {
     service_port        = each.value.metadata.service_port
   })
   depends_on = [
-    null_resource.kind_image_load_app,
+    null_resource.cluster_dependency,
+    null_resource.cluster_dependency_azure,
+
     null_resource.rollout_trigger_deployment,
     null_resource.rollout_trigger_statefulset,
     kubectl_manifest.storage_classes,
@@ -472,9 +496,7 @@ resource "kubectl_manifest" "app_statefulset" {
     if !var.cluster_create && try(v.statefulset, null) != null
   }
 
-  yaml_body = join("\n---\n", [
-    # StatefulSet YAML
-    templatefile("${var.k8s_base_path}/statefulset.yaml", {
+  yaml_body = templatefile("${var.k8s_base_path}/statefulset.yaml", {
       app_name               = each.value.metadata.app_name
       namespace_name         = var.project_namespace_name
       is_local_deployment    = var.is_local_deployment
@@ -506,17 +528,7 @@ resource "kubectl_manifest" "app_statefulset" {
         try(each.value.statefulset.environment, {})
       )
       depends_on_details = try(local.depends_on_details[each.key], {})
-    }),
-
-    # Service YAML
-    templatefile("${var.k8s_base_path}/service.yaml", {
-      app_name            = each.value.metadata.app_name
-      namespace_name      = var.project_namespace_name
-      is_local_deployment = var.is_local_deployment
-      target_port         = each.value.metadata.target_port
-      service_port        = each.value.metadata.service_port
-    })
-  ])
+  })
 
   wait = false
 
@@ -527,27 +539,6 @@ resource "kubectl_manifest" "app_statefulset" {
 }
 
 # 6. Create Kubernetes Ingress for each app that has ingress enabled
-/*
-resource "kubectl_manifest" "app_ingress" {
-  for_each = {
-    for k, v in var.app_configs : k => v
-    if !var.cluster_create && v.ingress != null
-  }
-
-  yaml_body = templatefile("${var.k8s_base_path}/ingress.yaml", {
-    app_name          = each.value.metadata.app_name
-    namespace_name    = var.project_namespace_name
-    ingress_host      = var.ingress_host
-    ingress_path      = each.value.ingress.path
-  })
-
-  depends_on = [
-    kubectl_manifest.app_service,
-    # Reference the singular instance [0]
-    helm_release.ingress_nginx[0]
-  ]
-}
-*/
 resource "kubectl_manifest" "http_route" {
   for_each = {
     for k, v in var.app_configs : k => v
@@ -591,7 +582,8 @@ resource "null_resource" "kind_image_load_base_images" {
   }
 
   depends_on = [
-    kind_cluster.default,
+    null_resource.cluster_dependency,
+    null_resource.cluster_dependency_azure,
     docker_image.base,
     kubectl_manifest.http_route,
   ]

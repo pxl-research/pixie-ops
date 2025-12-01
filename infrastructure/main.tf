@@ -1,16 +1,17 @@
 locals {
-  apps_path = "${path.module}/../../../apps"
+  apps_path = "${path.module}/../apps"
   ingress_port = 80
 }
 
 module "development" {
-  k8s_base_path           = "${path.module}/../../modules/kubernetes"
-  source = "../../modules/local"
+  k8s_base_path           = "${path.module}/modules/kubernetes"
+  source = "./modules/terraform"
   is_local_deployment     = true
 
   # Build argument
   # --------------
   cluster_create          = var.cluster_create
+  deployment_target       = var.deployment_target
 
   # Main configuration
   # ------------------
