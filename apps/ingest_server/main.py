@@ -9,8 +9,8 @@ from psycopg2 import extras
 from pydantic import BaseModel, Field
 from hello_flow import HelloFlow
 
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, CountRequest
+# from qdrant_client import QdrantClient
+# from qdrant_client.models import Distance, VectorParams, PointStruct, CountRequest
 # from sentence_transformers import SentenceTransformer
 
 # -----------------------------
@@ -31,12 +31,12 @@ QDRANT_PORT = int(os.getenv("QDRANT_PORT", 6333))
 COLLECTION = os.getenv("QDRANT_COLLECTION", "pixie_vectors")
 MODEL_NAME = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 VECTOR_SIZE = int(os.getenv("VECTOR_SIZE", 384))
-qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-if COLLECTION not in qdrant_client.get_collections().collections:
-    qdrant_client.create_collection(
-        collection_name=COLLECTION,
-        vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.DOT),
-    )
+# qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+# if COLLECTION not in qdrant_client.get_collections().collections:
+#     qdrant_client.create_collection(
+#         collection_name=COLLECTION,
+#         vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.DOT),
+#     )
 #embedder = SentenceTransformer(MODEL_NAME)
 
 def dummy_embed(text: str) -> list[float]:
@@ -148,29 +148,29 @@ curl -X POST http://localhost/ingest/write-vector \
   "metadata": {"sensor": "pump_a"}
 }'; echo
 '''
-@app.post("/write-vector", status_code=201)
-def write_vector(item: VectorItem):
-    try:
-        # vector = embedder.encode(item.text).tolist()
-        vector = dummy_embed(item.text)
-        point_id = str(uuid.uuid4())
-
-        qdrant_client.upsert(
-            collection_name=COLLECTION,
-            wait=True,
-            points=[
-                PointStruct(id=point_id, vector=vector, payload={"text": item.text, "metadata": item.metadata}),
-            ]
-        )
-
-        return {
-            "status": "success",
-            "id": point_id,
-            "message": "Vector written to Qdrant"
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/write-vector", status_code=201)
+# def write_vector(item: VectorItem):
+#     try:
+#         # vector = embedder.encode(item.text).tolist()
+#         vector = dummy_embed(item.text)
+#         point_id = str(uuid.uuid4())
+#
+#         qdrant_client.upsert(
+#             collection_name=COLLECTION,
+#             wait=True,
+#             points=[
+#                 PointStruct(id=point_id, vector=vector, payload={"text": item.text, "metadata": item.metadata}),
+#             ]
+#         )
+#
+#         return {
+#             "status": "success",
+#             "id": point_id,
+#             "message": "Vector written to Qdrant"
+#         }
+#
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 '''
 curl -X POST http://localhost/ingest/search-vectors \
@@ -180,23 +180,23 @@ curl -X POST http://localhost/ingest/search-vectors \
   "limit": 3
 }'; echo
 '''
-@app.post("/search-vectors")
-def search_vectors(data: SearchRequest):
-    try:
-        # query_vector = embedder.encode(data.query).tolist()
-        query_vector = dummy_embed(data.query)
-
-        search_result = qdrant_client.query_points(
-            collection_name=COLLECTION,
-            query=query_vector,
-            with_payload=True,
-            limit=3
-        ).points
-
-        return search_result
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/search-vectors")
+# def search_vectors(data: SearchRequest):
+#     try:
+#         # query_vector = embedder.encode(data.query).tolist()
+#         query_vector = dummy_embed(data.query)
+#
+#         search_result = qdrant_client.query_points(
+#             collection_name=COLLECTION,
+#             query=query_vector,
+#             with_payload=True,
+#             limit=3
+#         ).points
+#
+#         return search_result
+#
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/")

@@ -67,7 +67,7 @@ module "development" {
       }
     }
     */
-    /**/
+    /*
     pixie-vector-db = {
       metadata = {
         app_name        = "pixie-vector-db"
@@ -95,6 +95,7 @@ module "development" {
         }
       }
     }
+    */
 
     /**/
     pixie-ingest = {
@@ -128,7 +129,7 @@ module "development" {
         #   X=""
         #   Y=""
         # }
-        depends_on = { pixie-vector-db = { http_path = "/readyz" } }
+        # depends_on = { pixie-vector-db = { http_path = "/readyz" } }
         # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
@@ -152,6 +153,88 @@ module "development" {
       }
       ingress = {
         path = "/ingest"
+      }
+    }
+    /*
+    pixie-embedding-model = {
+      metadata = {
+        app_name        = "pixie-embedding-model"
+        target_port     = 8000
+        service_port    = local.ingress_port
+      }
+      deployment = {
+        replica_count   = 1
+        # Local Docker apps
+        image_name      = "pixie-embedding-model"
+        image_tag       = "1.0.0"
+        docker_context  = local.apps_path
+        dockerfile_path = "${local.apps_path}/embedding_model"
+        request_cpu     = "128m"
+        request_memory  = "128Mi"
+        limit_cpu       = "256m"
+        limit_memory    = "256Mi"
+        restart         = "Always" # Always (default), OnFailure, Never
+      }
+      ingress = {
+        path = "/embedding-model"
+      }
+    }
+    */
+    pixie-ingest-dup = {
+      metadata = {
+        app_name        = "pixie-ingest-dup"
+        target_port     = 8080
+        service_port    = local.ingress_port
+      }
+      deployment = {
+        replica_count   = 1
+
+        # Remote Docker apps, e.g. (note: this one uses port 80, doesn't have liveness or readiness checks, and does not have a .env file):
+        # image_name      = "tiangolo/uvicorn-gunicorn-fastapi"
+        # image_tag       = "python3.10"
+        # docker_context  = null
+        # dockerfile_path = null
+
+        # Local Docker apps
+        image_name      = "pixie-ingest-dup"
+        image_tag       = "1.0.0"
+        docker_context  = local.apps_path
+        dockerfile_path = "${local.apps_path}/ingest_server"
+        request_cpu     = "128m"
+        request_memory  = "128Mi"
+        limit_cpu       = "256m"
+        limit_memory    = "256Mi"
+        restart         = "Always" # Always (default), OnFailure, Never
+        env_file        = ".env" # Path starting relatively from Dockerfile path
+        # environment overrides any variables with the same name that are loaded from env_file
+        # environment = {
+        #   X=""
+        #   Y=""
+        # }
+        # depends_on = { pixie-vector-db = { http_path = "/readyz" } }
+        # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
+        # So we use INTERNAL port number and internal path.
+        liveness_probe = {
+          # Using an exec command similar to Docker Compose healthcheck 'test'
+          command               = ["sh", "-c", "wget -q -O /dev/null http://localhost:${8080}/livez || exit 1"]
+          # path                  = "/livez" # or we can use the path
+          initial_delay_seconds = 60
+          period_seconds        = 1200
+          timeout_seconds       = 3
+          failure_threshold     = 3
+        }
+        readiness_probe = {
+          # Readiness continues to use the HTTP GET path
+          path                  = "/readyz"
+          initial_delay_seconds = 30
+          period_seconds        = 300
+          timeout_seconds       = 3 # Adding default timeout
+          success_threshold     = 3
+          failure_threshold     = 2
+        }
+      }
+      ingress = {
+        path = "/ingestdup"
       }
     }
   }

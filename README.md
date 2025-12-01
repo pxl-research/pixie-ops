@@ -129,8 +129,8 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Test embedding model (for GPU support).
 * Isolate reusable module code. 
+* Test embedding model (for GPU support).
 * Azure infrastructure + common API with local.
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!
