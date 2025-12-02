@@ -71,7 +71,7 @@ resource "kind_cluster" "default" {
 }
 */
 resource "null_resource" "kind_cluster_creator_no_gpu" {
-  count = (var.deployment_target == "local" && !var.gpu_used) ? 1 : 0
+  count = (var.cluster_create && var.deployment_target == "local" && !var.gpu_used) ? 1 : 0
   triggers = {
     cluster_name = var.cluster_name
     ingress_port = var.ingress_port
@@ -100,7 +100,7 @@ EOF
 }
 
 resource "null_resource" "kind_cluster_creator_gpu" {
-  count = (var.deployment_target == "local" && var.gpu_used) ? 1 : 0
+  count = (var.cluster_create && var.deployment_target == "local" && var.gpu_used) ? 1 : 0
   triggers = {
     cluster_name = var.cluster_name
     ingress_port = var.ingress_port
@@ -128,6 +128,20 @@ EOF
   }
 }
 
+resource "helm_release" "nvidia_device_plugin" {
+  count = (var.cluster_create && var.deployment_target == "local" && var.gpu_used) ? 1 : 0
+
+  name             = "nvidia-device-plugin"
+  repository       = "https://nvidia.github.io/k8s-device-plugin"
+  chart            = "nvidia-device-plugin"
+  namespace        = "nvidia"
+  create_namespace = true
+
+  depends_on = [
+    null_resource.kind_cluster_creator_gpu
+  ]
+}
+
 
 # TODO: alternative cluster for Azure
 
@@ -138,7 +152,8 @@ resource "null_resource" "cluster_dependency" {
   depends_on = [
     #kind_cluster.default
     null_resource.kind_cluster_creator_no_gpu,
-    null_resource.kind_cluster_creator_gpu
+    null_resource.kind_cluster_creator_gpu,
+    helm_release.nvidia_device_plugin
   ]
 }
 
@@ -153,6 +168,8 @@ resource "null_resource" "cluster_dependency_azure" {
   ]
 }
 
+
+
 resource "kubectl_manifest" "project_namespace" {
   # Only create this resource when the cluster is NOT being created in this run.
   count = var.cluster_create ? 0 : 1
@@ -163,7 +180,7 @@ resource "kubectl_manifest" "project_namespace" {
 
   depends_on = [
     null_resource.cluster_dependency,
-    null_resource.cluster_dependency_azure
+    null_resource.cluster_dependency_azure,
   ]
 }
 

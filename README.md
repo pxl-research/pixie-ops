@@ -151,6 +151,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Re-install NVIDIA Container Toolkit (nvidia-docker2) properly.
 * GPU support: Continue this step: https://github.com/NVIDIA/nvkind?tab=readme-ov-file#install-the-k8s-device-plugin
 * Test embedding model (for GPU support).
 * Azure infrastructure + common API with local.
