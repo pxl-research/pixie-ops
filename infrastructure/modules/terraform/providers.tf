@@ -43,20 +43,26 @@ locals {
 provider "kubernetes" {
   # FIX: Conditionally reference the single instance (index [0]) only if it exists (var.create_cluster is true).
   # If the cluster is NOT being created, fall back to reading the kubeconfig file via the path (null value).
+  config_path = local.kube_config_path
+  /*
   host                   = kind_cluster.default[0].endpoint
   client_certificate     = kind_cluster.default[0].client_certificate
   client_key             = kind_cluster.default[0].client_key
   cluster_ca_certificate = kind_cluster.default[0].cluster_ca_certificate
+  */
 }
 
 # Helm provider (default)
 provider "helm" {
   kubernetes = {
+    config_path = local.kube_config_path
     # FIX: Conditionally reference the single instance (index [0]) only if it exists.
+    /*
     host                   = kind_cluster.default[0].endpoint
     client_certificate     = kind_cluster.default[0].client_certificate
     client_key             = kind_cluster.default[0].client_key
     cluster_ca_certificate = kind_cluster.default[0].cluster_ca_certificate
+    */
   }
 }
 

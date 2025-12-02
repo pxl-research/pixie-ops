@@ -9,3 +9,9 @@ variable "deployment_target" {
   type        = string
   default     = "local"
 }
+
+variable "gpu_used" {
+  description = "A flag to determine if the cluster uses GPU."
+  type        = bool
+  default     = false
+}

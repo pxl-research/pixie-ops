@@ -4,27 +4,6 @@ Please ignore everything below currently!
 
 ## Installation on Ubuntu (native or WSL2 on Windows):
 The following dependencies are needed:
-* Go:
-```
-sudo rm -rf /usr/local/go
-wget https://go.dev/dl/go1.25.4.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.25.4.linux-amd64.tar.gz
-rm go1.25.4.linux-amd64.tar.gz
-export PATH=$PATH:/usr/local/go/bin
-go version
-```
-
-* nvkind:
-```
-sudo nvidia-ctk runtime configure --runtime=docker --set-as-default --cdi.enabled
-sudo nvidia-ctk config --set accept-nvidia-visible-devices-as-volume-mounts=true --in-place
-sudo systemctl restart docker
-go install github.com/NVIDIA/nvkind/cmd/nvkind@latest
-echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.bashrc
-source ~/.bashrc
-nvkind --help
-```
-
 * Docker:
 ```
 sudo apt update && apt upgrade
@@ -112,6 +91,28 @@ TODO
 ```
 TODO
 ```
+
+* Go:
+```
+sudo rm -rf /usr/local/go
+wget https://go.dev/dl/go1.25.4.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.25.4.linux-amd64.tar.gz
+rm go1.25.4.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+go version
+```
+
+* nvkind:
+```
+sudo nvidia-ctk runtime configure --runtime=docker --set-as-default --cdi.enabled
+sudo nvidia-ctk config --set accept-nvidia-visible-devices-as-volume-mounts=true --in-place
+sudo systemctl restart docker
+go install github.com/NVIDIA/nvkind/cmd/nvkind@latest
+echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.bashrc
+source ~/.bashrc
+nvkind --help
+```
+
 
 ## Development: local deployment on kind
 ```

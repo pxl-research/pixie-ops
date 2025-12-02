@@ -44,6 +44,7 @@ locals {
   }
 }
 
+/*
 resource "kind_cluster" "default" {
   count           = var.deployment_target == "local" ? 1 : 0
   name            = var.cluster_name
@@ -68,6 +69,34 @@ resource "kind_cluster" "default" {
     }
   }
 }
+*/
+resource "null_resource" "kind_cluster_creator" {
+  count = var.deployment_target == "local" ? 1 : 0
+  triggers = {
+    cluster_name = var.cluster_name
+    ingress_port = var.ingress_port
+    config_file  = templatefile("${var.k8s_base_path}/kind-config.yaml", {
+      ingress_port = var.ingress_port
+    })
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      CONFIG_CONTENT=$(cat <<EOF
+${self.triggers.config_file}
+EOF
+)
+      echo "$CONFIG_CONTENT" > kind_config_${var.cluster_name}.yaml
+      kind create cluster --name ${var.cluster_name} --config kind_config_${var.cluster_name}.yaml
+    EOT
+    when = create
+  }
+
+  provisioner "local-exec" {
+    command = "kind delete cluster --name ${self.triggers.cluster_name}"
+    when    = destroy
+  }
+}
 
 # TODO: alternative cluster for Azure
 
@@ -76,7 +105,8 @@ resource "null_resource" "cluster_dependency" {
 
   # This is where the dependency is created.
   depends_on = [
-    kind_cluster.default
+    #kind_cluster.default
+    null_resource.kind_cluster_creator
   ]
 }
 
@@ -85,7 +115,8 @@ resource "null_resource" "cluster_dependency_azure" {
 
   # This is where the dependency is created.
   depends_on = [
-    kind_cluster.default # TODO: change to Azure variant
+    # kind_cluster.default # TODO: change to Azure variant
+    null_resource.kind_cluster_creator
   ]
 }
 
