@@ -5,5 +5,8 @@ nodes:
   - role: worker
     extraPortMappings:
       - containerPort: 31007
-        hostPort: 80
+        hostPort: ${ingress_port}
         protocol: TCP
+    extraMounts:
+      - hostPath: /dev/null
+        containerPath: /var/run/nvidia-container-devices/0

@@ -151,7 +151,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Isolate reusable module code. 
+* GPU support: Continue this step: https://github.com/NVIDIA/nvkind?tab=readme-ov-file#install-the-k8s-device-plugin
 * Test embedding model (for GPU support).
 * Azure infrastructure + common API with local.
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.

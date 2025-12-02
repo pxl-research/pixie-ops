@@ -70,12 +70,12 @@ resource "kind_cluster" "default" {
   }
 }
 */
-resource "null_resource" "kind_cluster_creator" {
-  count = var.deployment_target == "local" ? 1 : 0
+resource "null_resource" "kind_cluster_creator_no_gpu" {
+  count = (var.deployment_target == "local" && !var.gpu_used) ? 1 : 0
   triggers = {
     cluster_name = var.cluster_name
     ingress_port = var.ingress_port
-    config_file  = templatefile("${var.k8s_base_path}/kind-config.yaml", {
+    config_file  = templatefile("${var.k8s_base_path}/kind-config-no-gpu.yaml", {
       ingress_port = var.ingress_port
     })
   }
@@ -88,6 +88,7 @@ EOF
 )
       echo "$CONFIG_CONTENT" > kind_config_${var.cluster_name}.yaml
       kind create cluster --name ${var.cluster_name} --config kind_config_${var.cluster_name}.yaml
+      rm kind_config_${var.cluster_name}.yaml
     EOT
     when = create
   }
@@ -98,6 +99,36 @@ EOF
   }
 }
 
+resource "null_resource" "kind_cluster_creator_gpu" {
+  count = (var.deployment_target == "local" && var.gpu_used) ? 1 : 0
+  triggers = {
+    cluster_name = var.cluster_name
+    ingress_port = var.ingress_port
+    config_file  = templatefile("${var.k8s_base_path}/kind-config-gpu.yaml", {
+      ingress_port = var.ingress_port
+    })
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      CONFIG_CONTENT=$(cat <<EOF
+${self.triggers.config_file}
+EOF
+)
+      echo "$CONFIG_CONTENT" > kind_config_${var.cluster_name}.yaml
+      nvkind cluster create --name ${var.cluster_name} --config-template kind_config_${var.cluster_name}.yaml
+      rm kind_config_${var.cluster_name}.yaml
+    EOT
+    when = create
+  }
+
+  provisioner "local-exec" {
+    command = "nvkind cluster delete --name ${self.triggers.cluster_name}"
+    when    = destroy
+  }
+}
+
+
 # TODO: alternative cluster for Azure
 
 resource "null_resource" "cluster_dependency" {
@@ -106,7 +137,8 @@ resource "null_resource" "cluster_dependency" {
   # This is where the dependency is created.
   depends_on = [
     #kind_cluster.default
-    null_resource.kind_cluster_creator
+    null_resource.kind_cluster_creator_no_gpu,
+    null_resource.kind_cluster_creator_gpu
   ]
 }
 
@@ -116,7 +148,8 @@ resource "null_resource" "cluster_dependency_azure" {
   # This is where the dependency is created.
   depends_on = [
     # kind_cluster.default # TODO: change to Azure variant
-    null_resource.kind_cluster_creator
+    null_resource.kind_cluster_creator_no_gpu,
+    null_resource.kind_cluster_creator_gpu
   ]
 }
 
