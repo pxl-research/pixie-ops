@@ -54,15 +54,14 @@ sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi
 ```
 
-* kind:
+* Minikube:
 ```
-# Linux
-[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-linux-amd64
-# For M1 / ARM Macs
-[ $(uname -m) = arm64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-darwin-arm64
-chmod +x ./kind
-sudo mv ./kind /usr/local/bin/kind
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
 
+# Verify via:
+minikube start --driver=docker --gpus=all --memory=2048mb
+minikube delete
 ```
 
 
@@ -92,22 +91,28 @@ TODO
 TODO
 ```
 
-## Development: local deployment on kind
+
+## Development: local deployment
 ```
 cd infrastructure/
+minikube start --driver=docker --gpus=all --memory=2048mb --disk=80gb
+export KUBE_CONTEXT=minikube
+alias kubectl="minikube kubectl --"
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
+kubectl describe node minikube | grep nvidia.com/gpu
+
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
-tofu apply -var="cluster_create=true" -auto-approve # first only create the cluster
-# wait +- 2 minutes
-tofu apply -auto-approve # then create the resources on the cluster
+tofu apply -var="deployment_target=local" -var="gpu_used=true" -auto-approve
 
+# Testing:
+curl -H "Host: localhost" http://$(minikube ip):31007/ingest; echo
+curl -X POST -H "Host: localhost" http://$(minikube ip):31007/ingest/trigger; echo
+curl -H "Host: localhost" http://$(minikube ip):31007/ingest/status/{workflow_id}; echo
 
-# Only use this in another terminal if you want to inspect workflows via the browser (during development)
-./port_forwarding.sh
-
-curl http://localhost:8080/ingest; echo
-curl -X POST http://localhost:8080/ingest/trigger; echo
+# Turn off cluster:
+minikube delete
 ```
 
 ## Production: Azure Deployment on AKS
@@ -129,8 +134,8 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Isolate reusable module code. 
-* Test embedding model (for GPU support).
+* Make disk, RAM and GPU usage configurable for (minikube) cluster instead of hardcoding.
+* Test embedding model (for GPU support on minikube).
 * Azure infrastructure + common API with local.
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!
@@ -141,53 +146,3 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 
 Note: only use CI/CD to build containers when pushing to main.
 Changing production should be done by manually applying Terraform/OpenTofu.
-
-
-```
-+-------------------+
-|   Client (User)   |
-|       curl        |
-+---------+---------+
-          |
-          v
-+-------------------+
-|   localhost:80    |
-|   (hostPort:80)   |
-+---------+---------+
-          |
-          v
-+-------------------+
-|  kind Node (VM)   |
-| extraPortMapping  |
-| 80 -> 31007       |
-+---------+---------+
-          |
-          v
-+---------------------------+
-| NGINX Gateway Service     |
-| Type: NodePort            |
-| 31007 -> targetPort: 80   |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-| NGINX Gateway API Fabric  |
-| Controller Pod            |
-| Applies Gateway + Routes  |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-|   App Service (ClusterIP) |
-|   name: ${app_name}-svc   |
-|   port: 80 -> 8080        |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-|  Backend Pod              |
-|  ${app_name} container    |
-|  running on :8080         |
-+---------------------------+
-
-```

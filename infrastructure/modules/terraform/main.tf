@@ -44,49 +44,36 @@ locals {
   }
 }
 
-resource "kind_cluster" "default" {
-  count           = var.deployment_target == "local" ? 1 : 0
-  name            = var.cluster_name
-  kubeconfig_path = local.kube_config_path
-  wait_for_ready  = true
+resource "null_resource" "minikube_start_setup" {
+  triggers = {
+    minikube_config = "docker-gpus-all-2048mb"
+  }
 
-  kind_config {
-    kind          = "Cluster"
-    api_version   = "kind.x-k8s.io/v1alpha4"
-
-    node {
-      role = "control-plane"
-    }
-
-    node {
-      role = "worker"
-      extra_port_mappings {
-        container_port = 31007               # Matches containerPort: 31007
-        host_port      = var.ingress_port    # Matches hostPort: e.g. 80
-        protocol       = "TCP"               # Matches protocol: TCP (optional, as TCP is default)
-      }
-    }
+  provisioner "local-exec" {
+    command = <<-EOT
+      minikube start --driver=docker --gpus=all --memory=4096mb --disk=80gb && export KUBE_CONTEXT=minikube && alias kubectl="minikube kubectl --"
+    EOT
+    on_failure = continue # Allow the command to fail without destroying the resource state
   }
 }
+
+resource "null_resource" "nvidia_device_plugin_deploy" {
+  provisioner "local-exec" {
+    command = "kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml"
+  }
+  depends_on = [null_resource.minikube_start_setup]
+}
+
 
 # TODO: alternative cluster for Azure
 
 resource "null_resource" "cluster_dependency" {
   count = var.deployment_target == "local" ? 1 : 0
-
-  # This is where the dependency is created.
-  depends_on = [
-    kind_cluster.default
-  ]
+  depends_on = [null_resource.nvidia_device_plugin_deploy]
 }
 
 resource "null_resource" "cluster_dependency_azure" {
   count = var.deployment_target == "azure" ? 1 : 0
-
-  # This is where the dependency is created.
-  depends_on = [
-    kind_cluster.default # TODO: change to Azure variant
-  ]
 }
 
 resource "kubectl_manifest" "project_namespace" {
@@ -99,7 +86,7 @@ resource "kubectl_manifest" "project_namespace" {
 
   depends_on = [
     null_resource.cluster_dependency,
-    null_resource.cluster_dependency_azure
+    null_resource.cluster_dependency_azure,
   ]
 }
 
@@ -167,45 +154,6 @@ resource "helm_release" "argo_workflows" {
     kubectl_manifest.project_namespace[0]
   ]
 }
-
-/*
-resource "helm_release" "ingress_nginx" {
-  count = var.cluster_create ? 0 : 1
-
-  name             = "ingress-nginx"
-  repository       = "https://kubernetes.github.io/ingress-nginx"
-  chart            = "ingress-nginx"
-  version          = var.ingress_version
-  namespace        = var.ingress_namespace_name
-  create_namespace = true
-
-  values = [file("${var.k8s_base_path}/ingress-nginx-values.yaml")]
-
-  depends_on = [
-    # Reference the singular instance [0]
-    kubectl_manifest.project_namespace[0]
-  ]
-}
-
-########################################
-# WAIT FOR INGRESS CONTROLLER
-########################################
-resource "null_resource" "wait_for_ingress_nginx" {
-  count = var.cluster_create ? 0 : 1
-
-  triggers = {
-    key = uuid()
-  }
-
-  provisioner "local-exec" {
-    # Reference the singular instance [0]
-    command = "echo 'Waiting for the nginx ingress controller...' && kubectl wait --namespace ${helm_release.ingress_nginx[0].namespace} --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=600s"
-  }
-
-  # Reference the singular instance [0]
-  depends_on = [helm_release.ingress_nginx[0]]
-}
-*/
 
 resource "kubectl_manifest" "http_gateway" {
   count = var.cluster_create ? 0 : 1
@@ -336,7 +284,8 @@ resource "null_resource" "kind_image_load_app" {
 
   provisioner "local-exec" {
     # Use the name calculated in the triggers block
-    command = "kind load docker-image ${self.triggers.image_name} --name ${var.cluster_name}"
+    # command = "kind load docker-image ${self.triggers.image_name} --name ${var.cluster_name}"
+    command = "minikube image load ${self.triggers.image_name}"
   }
 
   depends_on = [
@@ -377,6 +326,7 @@ resource "kubectl_manifest" "storage_classes" {
   depends_on = [
     null_resource.cluster_dependency,
     null_resource.cluster_dependency_azure,
+    kubectl_manifest.project_namespace,
     null_resource.rollout_trigger
   ]
 }
@@ -484,7 +434,8 @@ resource "kubectl_manifest" "app_deployment" {
 
   depends_on = [
     kubectl_manifest.app_service,
-    null_resource.rollout_trigger_deployment
+    null_resource.rollout_trigger_deployment,
+    null_resource.kind_image_load_app
   ]
 }
 
@@ -534,7 +485,8 @@ resource "kubectl_manifest" "app_statefulset" {
 
   depends_on = [
     kubectl_manifest.app_service,
-    null_resource.rollout_trigger_statefulset
+    null_resource.rollout_trigger_statefulset,
+    null_resource.kind_image_load_app
   ]
 }
 
@@ -578,7 +530,8 @@ resource "null_resource" "kind_image_load_base_images" {
   }
 
   provisioner "local-exec" {
-    command = "kind load docker-image ${docker_image.base[each.key].name} --name ${var.cluster_name}"
+    # command = "kind load docker-image ${docker_image.base[each.key].name} --name ${var.cluster_name}"
+    command = "minikube image load ${docker_image.base[each.key].name}"
   }
 
   depends_on = [

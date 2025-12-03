@@ -16,7 +16,8 @@ spec:
   # An Ingress controller, which handles external traffic, uses an Ingress resource to route traffic to backend Services,
   # and for this purpose, ClusterIP is the standard, most efficient, and secure choice.
   # Otherwise, when a service is not externally reachable via Gateway or Ingress controller,
-  # a ClusterIP is sufficient.
+  # a ClusterIP is sufficient in kind and apparently also for minikube when driver=docker.
+  # For minikube driver=virtualbox we need NodePort because a VM is a network barrier which requires NodePort or tunnel to bridge the network.
   type: ClusterIP
   # The selector targets pods (or pods in Deployment) with the matching label.
   # If no Pods match the selector, the Service has no endpoints (connection refused)

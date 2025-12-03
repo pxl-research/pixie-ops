@@ -10,6 +10,12 @@ variable "deployment_target" {
   default     = "local"
 }
 
+variable "gpu_used" {
+  description = "A flag to determine if the cluster uses GPU."
+  type        = bool
+  default     = false
+}
+
 variable "cluster_name" {
   description = "The name to assign to the Kubernetes cluster (e.g., kind cluster name)."
   type        = string

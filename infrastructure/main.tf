@@ -12,6 +12,7 @@ module "development" {
   # --------------
   cluster_create          = var.cluster_create
   deployment_target       = var.deployment_target
+  gpu_used                = var.gpu_used
 
   # Main configuration
   # ------------------
@@ -39,11 +40,12 @@ module "development" {
 
   app_configs = {
     /*
+    */
     database_server = {
       metadata = {
         app_name        = "pixie-db"
-        target_port     = 6333 # 5432
-        service_port    = 6333 # 5432
+        target_port     = 5432
+        service_port    = 5432
       }
       statefulset = {
         replica_count   = 1
@@ -67,7 +69,6 @@ module "development" {
         }
       }
     }
-    */
     /*
     pixie-vector-db = {
       metadata = {
@@ -116,7 +117,7 @@ module "development" {
 
         # Local Docker apps
         image_name      = "pixie-ingest"
-        image_tag       = "1.0.3"
+        image_tag       = "1.0.0"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/ingest_server"
         request_cpu     = "128m"
@@ -181,6 +182,7 @@ module "development" {
       }
     }
     */
+    /*
     pixie-ingest-dup = {
       metadata = {
         app_name        = "pixie-ingest-dup"
@@ -238,5 +240,6 @@ module "development" {
         path = "/ingestdup"
       }
     }
+    */
   }
 }

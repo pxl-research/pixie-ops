@@ -1,24 +1,22 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer
+from FlagEmbedding import FlagAutoModel
+import torch
+
+embedding_model = FlagAutoModel.from_finetuned(
+    "BAAI/bge-m3",
+    query_instruction_for_retrieval="Represent this sentence for searching relevant passages: ",
+    devices="cuda:0",   # if not specified, will use all available gpus or cpu when no gpu available
+)
 
 app = FastAPI()
 
-# Load model once at startup
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-
-class TextRequest(BaseModel):
-    text: str
-
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return str(torch.__version__) + " " + str(torch.cuda.is_available()) + " " + torch.cuda.get_device_name(0)
 
-@app.post("/embed")
-def embed(req: TextRequest):
-    embedding = model.encode(req.text)
+@app.get("/embed")
+def embed():
+    query = "Hello"
+    q_embedding = embedding_model.encode_queries(query)["dense_vecs"]
 
-    return {
-        "embedding": embedding.tolist(),
-        "dim": len(embedding)
-    }
+    return q_embedding.tolist()[:3]

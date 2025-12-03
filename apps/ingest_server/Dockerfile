@@ -6,6 +6,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl wget \
     && rm -rf /var/lib/apt/lists/*
 
+# For network debugging
+RUN apt update && apt install netcat-openbsd -y
+
 # Build arguments as environment variables in container
 #ARG ARGO_WORKFLOWS_SERVER
 #ENV ARGO_WORKFLOWS_SERVER=${ARGO_WORKFLOWS_SERVER}
