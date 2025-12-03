@@ -94,42 +94,68 @@ TODO
 
 * Go:
 ```
-sudo rm -rf /usr/local/go
-wget https://go.dev/dl/go1.25.4.linux-amd64.tar.gz
-sudo tar -C /usr/local -xzf go1.25.4.linux-amd64.tar.gz
-rm go1.25.4.linux-amd64.tar.gz
-export PATH=$PATH:/usr/local/go/bin
+sudo rm -rf /usr/local/go && \
+wget https://go.dev/dl/go1.25.4.linux-amd64.tar.gz && \
+sudo tar -C /usr/local -xzf go1.25.4.linux-amd64.tar.gz && \
+rm go1.25.4.linux-amd64.tar.gz && \
+export PATH=$PATH:/usr/local/go/bin && \
+go version && \
+if ! grep -q 'export PATH=$PATH:/usr/local/go/bin' ~/.bashrc; then \
+  echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc; \
+fi
+
 go version
 ```
 
 * nvkind:
 ```
-sudo nvidia-ctk runtime configure --runtime=docker --set-as-default --cdi.enabled
-sudo nvidia-ctk config --set accept-nvidia-visible-devices-as-volume-mounts=true --in-place
-sudo systemctl restart docker
-go install github.com/NVIDIA/nvkind/cmd/nvkind@latest
-echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.bashrc
+sudo nvidia-ctk runtime configure --runtime=docker --set-as-default --cdi.enabled && \
+sudo nvidia-ctk config --set accept-nvidia-visible-devices-as-volume-mounts=true --in-place && \
+sudo systemctl restart docker && \
+go install github.com/NVIDIA/nvkind/cmd/nvkind@latest && \
+export PATH="$PATH:$(go env GOPATH)/bin" && \
+if ! grep -q 'export PATH="$PATH:$(go env GOPATH)/bin"' ~/.bashrc; then \
+  echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.bashrc; \
+fi && \
 source ~/.bashrc
+
+if ! grep -q 'export GOPATH="$HOME/go"' ~/.bashrc; then \
+  echo 'export GOPATH="$HOME/go"' >> ~/.bashrc; \
+fi && \
+if ! grep -q 'export PATH="$PATH:$GOPATH/bin"' ~/.bashrc; then \
+  echo 'export PATH="$PATH:$GOPATH/bin"' >> ~/.bashrc; \
+fi && \
+source ~/.bashrc
+
 nvkind --help
 ```
 
-
-## Development: local deployment on kind
+## Development: local deployment
 ```
 cd infrastructure/
+minikube start --driver=docker --gpus=all --memory=2048mb
+export KUBE_CONTEXT=minikube
+alias kubectl="minikube kubectl --"
+kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
+kubectl describe node minikube | grep nvidia.com/gpu
+
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
- tofu apply -var="cluster_create=true" -var="deployment_target=local" -auto-approve # first only create the cluster
+tofu apply -var="deployment_target=local" -var="gpu_used=true" -auto-approve
 # wait +- 2 minutes
 tofu apply -auto-approve # then create the resources on the cluster
 
+# Testing:
+# 1) In another terminal:
+minikube tunnel
+# 2) In original terminal:
+curl -H "Host: localhost" http://$(minikube ip):31007/ingest; echo
+curl -X POST -H "Host: localhost" http://$(minikube ip):31007/ingest/trigger; echo
+curl -H "Host: localhost" http://$(minikube ip):31007/ingest/status/{workflow_id}; echo
 
-# Only use this in another terminal if you want to inspect workflows via the browser (during development)
-./port_forwarding.sh
-
-curl http://localhost:8080/ingest; echo
-curl -X POST http://localhost:8080/ingest/trigger; echo
+# Turn off cluster:
+minikube delete
 ```
 
 ## Production: Azure Deployment on AKS

@@ -44,7 +44,7 @@ provider "kubernetes" {
   # FIX: Conditionally reference the single instance (index [0]) only if it exists (var.create_cluster is true).
   # If the cluster is NOT being created, fall back to reading the kubeconfig file via the path (null value).
   config_path = local.kube_config_path
-  config_context = "kind-${var.cluster_name}"
+  config_context = "minikube"
   /*
   host                   = kind_cluster.default[0].endpoint
   client_certificate     = kind_cluster.default[0].client_certificate
@@ -57,7 +57,7 @@ provider "kubernetes" {
 provider "helm" {
   kubernetes = {
     config_path = local.kube_config_path
-    config_context = "kind-${var.cluster_name}"
+    config_context = "minikube"
     # FIX: Conditionally reference the single instance (index [0]) only if it exists.
     /*
     host                   = kind_cluster.default[0].endpoint

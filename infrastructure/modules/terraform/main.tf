@@ -70,6 +70,7 @@ resource "kind_cluster" "default" {
   }
 }
 */
+/*
 resource "null_resource" "kind_cluster_creator_no_gpu" {
   count = (var.cluster_create && var.deployment_target == "local" && !var.gpu_used) ? 1 : 0
   triggers = {
@@ -91,11 +92,6 @@ EOF
       rm kind_config_${var.cluster_name}.yaml
     EOT
     when = create
-  }
-
-  provisioner "local-exec" {
-    command = "kind delete cluster --name ${self.triggers.cluster_name}"
-    when    = destroy
   }
 }
 
@@ -122,11 +118,9 @@ EOF
     when = create
   }
 
-  provisioner "local-exec" {
-    command = "nvkind cluster delete --name ${self.triggers.cluster_name}"
-    when    = destroy
-  }
 }
+
+
 
 resource "helm_release" "nvidia_device_plugin" {
   count = (var.cluster_create && var.deployment_target == "local" && var.gpu_used) ? 1 : 0
@@ -141,34 +135,18 @@ resource "helm_release" "nvidia_device_plugin" {
     null_resource.kind_cluster_creator_gpu
   ]
 }
+*/
 
 
 # TODO: alternative cluster for Azure
 
 resource "null_resource" "cluster_dependency" {
   count = var.deployment_target == "local" ? 1 : 0
-
-  # This is where the dependency is created.
-  depends_on = [
-    #kind_cluster.default
-    null_resource.kind_cluster_creator_no_gpu,
-    null_resource.kind_cluster_creator_gpu,
-    helm_release.nvidia_device_plugin
-  ]
 }
 
 resource "null_resource" "cluster_dependency_azure" {
   count = var.deployment_target == "azure" ? 1 : 0
-
-  # This is where the dependency is created.
-  depends_on = [
-    # kind_cluster.default # TODO: change to Azure variant
-    null_resource.kind_cluster_creator_no_gpu,
-    null_resource.kind_cluster_creator_gpu
-  ]
 }
-
-
 
 resource "kubectl_manifest" "project_namespace" {
   # Only create this resource when the cluster is NOT being created in this run.
@@ -248,45 +226,6 @@ resource "helm_release" "argo_workflows" {
     kubectl_manifest.project_namespace[0]
   ]
 }
-
-/*
-resource "helm_release" "ingress_nginx" {
-  count = var.cluster_create ? 0 : 1
-
-  name             = "ingress-nginx"
-  repository       = "https://kubernetes.github.io/ingress-nginx"
-  chart            = "ingress-nginx"
-  version          = var.ingress_version
-  namespace        = var.ingress_namespace_name
-  create_namespace = true
-
-  values = [file("${var.k8s_base_path}/ingress-nginx-values.yaml")]
-
-  depends_on = [
-    # Reference the singular instance [0]
-    kubectl_manifest.project_namespace[0]
-  ]
-}
-
-########################################
-# WAIT FOR INGRESS CONTROLLER
-########################################
-resource "null_resource" "wait_for_ingress_nginx" {
-  count = var.cluster_create ? 0 : 1
-
-  triggers = {
-    key = uuid()
-  }
-
-  provisioner "local-exec" {
-    # Reference the singular instance [0]
-    command = "echo 'Waiting for the nginx ingress controller...' && kubectl wait --namespace ${helm_release.ingress_nginx[0].namespace} --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=600s"
-  }
-
-  # Reference the singular instance [0]
-  depends_on = [helm_release.ingress_nginx[0]]
-}
-*/
 
 resource "kubectl_manifest" "http_gateway" {
   count = var.cluster_create ? 0 : 1
@@ -417,7 +356,8 @@ resource "null_resource" "kind_image_load_app" {
 
   provisioner "local-exec" {
     # Use the name calculated in the triggers block
-    command = "kind load docker-image ${self.triggers.image_name} --name ${var.cluster_name}"
+    # command = "kind load docker-image ${self.triggers.image_name} --name ${var.cluster_name}"
+    command = "minikube image load ${self.triggers.image_name}"
   }
 
   depends_on = [
@@ -458,6 +398,7 @@ resource "kubectl_manifest" "storage_classes" {
   depends_on = [
     null_resource.cluster_dependency,
     null_resource.cluster_dependency_azure,
+    kubectl_manifest.project_namespace,
     null_resource.rollout_trigger
   ]
 }
@@ -659,7 +600,8 @@ resource "null_resource" "kind_image_load_base_images" {
   }
 
   provisioner "local-exec" {
-    command = "kind load docker-image ${docker_image.base[each.key].name} --name ${var.cluster_name}"
+    # command = "kind load docker-image ${docker_image.base[each.key].name} --name ${var.cluster_name}"
+    command = "minikube image load ${docker_image.base[each.key].name}"
   }
 
   depends_on = [

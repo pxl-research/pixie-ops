@@ -10,3 +10,11 @@ nodes:
     extraMounts:
       - hostPath: /dev/null
         containerPath: /var/run/nvidia-container-devices/0
+      # Mount the entire /usr/lib/wsl directory which contains the driver libraries
+      - hostPath: /usr/lib/wsl
+        containerPath: /usr/lib/wsl
+        readOnly: true
+      # Mount /dev/dxg to give access to the GPU devices
+      - hostPath: /dev/dxg
+        containerPath: /dev/dxg
+        readOnly: false

@@ -182,6 +182,7 @@ module "development" {
       }
     }
     */
+    /*
     pixie-ingest-dup = {
       metadata = {
         app_name        = "pixie-ingest-dup"
@@ -239,5 +240,6 @@ module "development" {
         path = "/ingestdup"
       }
     }
+    */
   }
 }
