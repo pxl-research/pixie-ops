@@ -51,7 +51,7 @@ resource "null_resource" "minikube_start_setup" {
 
   provisioner "local-exec" {
     command = <<-EOT
-      minikube start --driver=docker --gpus=all --memory=2048mb --disk=80gb && export KUBE_CONTEXT=minikube && alias kubectl="minikube kubectl --"
+      minikube start --driver=docker --gpus=all --memory=4096mb --disk=80gb && export KUBE_CONTEXT=minikube && alias kubectl="minikube kubectl --"
     EOT
     on_failure = continue # Allow the command to fail without destroying the resource state
   }
