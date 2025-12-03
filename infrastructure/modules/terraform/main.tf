@@ -44,104 +44,32 @@ locals {
   }
 }
 
-/*
-resource "kind_cluster" "default" {
-  count           = var.deployment_target == "local" ? 1 : 0
-  name            = var.cluster_name
-  kubeconfig_path = local.kube_config_path
-  wait_for_ready  = true
-
-  kind_config {
-    kind          = "Cluster"
-    api_version   = "kind.x-k8s.io/v1alpha4"
-
-    node {
-      role = "control-plane"
-    }
-
-    node {
-      role = "worker"
-      extra_port_mappings {
-        container_port = 31007               # Matches containerPort: 31007
-        host_port      = var.ingress_port    # Matches hostPort: e.g. 80
-        protocol       = "TCP"               # Matches protocol: TCP (optional, as TCP is default)
-      }
-    }
-  }
-}
-*/
-/*
-resource "null_resource" "kind_cluster_creator_no_gpu" {
-  count = (var.cluster_create && var.deployment_target == "local" && !var.gpu_used) ? 1 : 0
+resource "null_resource" "minikube_start_setup" {
   triggers = {
-    cluster_name = var.cluster_name
-    ingress_port = var.ingress_port
-    config_file  = templatefile("${var.k8s_base_path}/kind-config-no-gpu.yaml", {
-      ingress_port = var.ingress_port
-    })
+    minikube_config = "docker-gpus-all-2048mb"
   }
 
   provisioner "local-exec" {
     command = <<-EOT
-      CONFIG_CONTENT=$(cat <<EOF
-${self.triggers.config_file}
-EOF
-)
-      echo "$CONFIG_CONTENT" > kind_config_${var.cluster_name}.yaml
-      kind create cluster --name ${var.cluster_name} --config kind_config_${var.cluster_name}.yaml
-      rm kind_config_${var.cluster_name}.yaml
+      minikube start --driver=docker --gpus=all --memory=2048mb --disk=80gb && export KUBE_CONTEXT=minikube && alias kubectl="minikube kubectl --"
     EOT
-    when = create
+    on_failure = continue # Allow the command to fail without destroying the resource state
   }
 }
 
-resource "null_resource" "kind_cluster_creator_gpu" {
-  count = (var.cluster_create && var.deployment_target == "local" && var.gpu_used) ? 1 : 0
-  triggers = {
-    cluster_name = var.cluster_name
-    ingress_port = var.ingress_port
-    config_file  = templatefile("${var.k8s_base_path}/kind-config-gpu.yaml", {
-      ingress_port = var.ingress_port
-    })
-  }
-
+resource "null_resource" "nvidia_device_plugin_deploy" {
   provisioner "local-exec" {
-    command = <<-EOT
-      CONFIG_CONTENT=$(cat <<EOF
-${self.triggers.config_file}
-EOF
-)
-      echo "$CONFIG_CONTENT" > kind_config_${var.cluster_name}.yaml
-      nvkind cluster create --name ${var.cluster_name} --config-template kind_config_${var.cluster_name}.yaml
-      rm kind_config_${var.cluster_name}.yaml
-    EOT
-    when = create
+    command = "kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml"
   }
-
+  depends_on = [null_resource.minikube_start_setup]
 }
-
-
-
-resource "helm_release" "nvidia_device_plugin" {
-  count = (var.cluster_create && var.deployment_target == "local" && var.gpu_used) ? 1 : 0
-
-  name             = "nvidia-device-plugin"
-  repository       = "https://nvidia.github.io/k8s-device-plugin"
-  chart            = "nvidia-device-plugin"
-  namespace        = "nvidia"
-  create_namespace = true
-
-  depends_on = [
-    null_resource.kind_cluster_creator_gpu
-  ]
-}
-*/
 
 
 # TODO: alternative cluster for Azure
 
 resource "null_resource" "cluster_dependency" {
   count = var.deployment_target == "local" ? 1 : 0
+  depends_on = [null_resource.nvidia_device_plugin_deploy]
 }
 
 resource "null_resource" "cluster_dependency_azure" {

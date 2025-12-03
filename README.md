@@ -54,15 +54,14 @@ sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.2.0-runtime-ubuntu22.04 nvidia-smi
 ```
 
-* kind:
+* Minikube:
 ```
-# Linux
-[ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-linux-amd64
-# For M1 / ARM Macs
-[ $(uname -m) = arm64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-darwin-arm64
-chmod +x ./kind
-sudo mv ./kind /usr/local/bin/kind
+curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
 
+# Verify via:
+minikube start --driver=docker --gpus=all --memory=2048mb
+minikube delete
 ```
 
 
@@ -92,52 +91,14 @@ TODO
 TODO
 ```
 
-* Go:
-```
-sudo rm -rf /usr/local/go && \
-wget https://go.dev/dl/go1.25.4.linux-amd64.tar.gz && \
-sudo tar -C /usr/local -xzf go1.25.4.linux-amd64.tar.gz && \
-rm go1.25.4.linux-amd64.tar.gz && \
-export PATH=$PATH:/usr/local/go/bin && \
-go version && \
-if ! grep -q 'export PATH=$PATH:/usr/local/go/bin' ~/.bashrc; then \
-  echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc; \
-fi
-
-go version
-```
-
-* nvkind:
-```
-sudo nvidia-ctk runtime configure --runtime=docker --set-as-default --cdi.enabled && \
-sudo nvidia-ctk config --set accept-nvidia-visible-devices-as-volume-mounts=true --in-place && \
-sudo systemctl restart docker && \
-go install github.com/NVIDIA/nvkind/cmd/nvkind@latest && \
-export PATH="$PATH:$(go env GOPATH)/bin" && \
-if ! grep -q 'export PATH="$PATH:$(go env GOPATH)/bin"' ~/.bashrc; then \
-  echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.bashrc; \
-fi && \
-source ~/.bashrc
-
-if ! grep -q 'export GOPATH="$HOME/go"' ~/.bashrc; then \
-  echo 'export GOPATH="$HOME/go"' >> ~/.bashrc; \
-fi && \
-if ! grep -q 'export PATH="$PATH:$GOPATH/bin"' ~/.bashrc; then \
-  echo 'export PATH="$PATH:$GOPATH/bin"' >> ~/.bashrc; \
-fi && \
-source ~/.bashrc
-
-nvkind --help
-```
 
 ## Development: local deployment
 ```
 cd infrastructure/
-minikube start --driver=docker --gpus=all --memory=2048mb
+minikube start --driver=docker --gpus=all --memory=2048mb --disk=80gb
 export KUBE_CONTEXT=minikube
 alias kubectl="minikube kubectl --"
-kubectl delete -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
-kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
 kubectl describe node minikube | grep nvidia.com/gpu
 
 tofu destroy # if necessary, or when having an error
@@ -173,9 +134,8 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Re-install NVIDIA Container Toolkit (nvidia-docker2) properly.
-* GPU support: Continue this step: https://github.com/NVIDIA/nvkind?tab=readme-ov-file#install-the-k8s-device-plugin
-* Test embedding model (for GPU support).
+* Make disk, RAM and GPU usage configurable for (minikube) cluster instead of hardcoding.
+* Test embedding model (for GPU support on minikube).
 * Azure infrastructure + common API with local.
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!
@@ -186,53 +146,3 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 
 Note: only use CI/CD to build containers when pushing to main.
 Changing production should be done by manually applying Terraform/OpenTofu.
-
-
-```
-+-------------------+
-|   Client (User)   |
-|       curl        |
-+---------+---------+
-          |
-          v
-+-------------------+
-|   localhost:80    |
-|   (hostPort:80)   |
-+---------+---------+
-          |
-          v
-+-------------------+
-|  kind Node (VM)   |
-| extraPortMapping  |
-| 80 -> 31007       |
-+---------+---------+
-          |
-          v
-+---------------------------+
-| NGINX Gateway Service     |
-| Type: NodePort            |
-| 31007 -> targetPort: 80   |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-| NGINX Gateway API Fabric  |
-| Controller Pod            |
-| Applies Gateway + Routes  |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-|   App Service (ClusterIP) |
-|   name: ${app_name}-svc   |
-|   port: 80 -> 8080        |
-+-------------+-------------+
-              |
-              v
-+---------------------------+
-|  Backend Pod              |
-|  ${app_name} container    |
-|  running on :8080         |
-+---------------------------+
-
-```

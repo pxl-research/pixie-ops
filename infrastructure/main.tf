@@ -158,7 +158,6 @@ module "development" {
       }
     }
     /*
-    */
     pixie-embedding-model = {
       metadata = {
         app_name        = "pixie-embedding-model"
@@ -182,6 +181,7 @@ module "development" {
         path = "/embedding-model"
       }
     }
+    */
     /*
     pixie-ingest-dup = {
       metadata = {
