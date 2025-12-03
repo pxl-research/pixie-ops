@@ -111,7 +111,8 @@ curl -H "Host: localhost" http://$(minikube ip):31007/ingest; echo
 curl -X POST -H "Host: localhost" http://$(minikube ip):31007/ingest/trigger; echo
 curl -H "Host: localhost" http://$(minikube ip):31007/ingest/status/{workflow_id}; echo
 
-# Turn off cluster:
+# Turn off cluster or delete it:
+minikube stop
 minikube delete
 ```
 
