@@ -136,6 +136,7 @@ cd infrastructure/
 minikube start --driver=docker --gpus=all --memory=2048mb
 export KUBE_CONTEXT=minikube
 alias kubectl="minikube kubectl --"
+kubectl delete -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
 kubectl create -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
 kubectl describe node minikube | grep nvidia.com/gpu
 
@@ -143,13 +144,8 @@ tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
 tofu apply -var="deployment_target=local" -var="gpu_used=true" -auto-approve
-# wait +- 2 minutes
-tofu apply -auto-approve # then create the resources on the cluster
 
 # Testing:
-# 1) In another terminal:
-minikube tunnel
-# 2) In original terminal:
 curl -H "Host: localhost" http://$(minikube ip):31007/ingest; echo
 curl -X POST -H "Host: localhost" http://$(minikube ip):31007/ingest/trigger; echo
 curl -H "Host: localhost" http://$(minikube ip):31007/ingest/status/{workflow_id}; echo

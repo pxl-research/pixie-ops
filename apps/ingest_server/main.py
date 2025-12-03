@@ -66,7 +66,8 @@ def get_db_connection():
             database=DB_NAME,
             user=DB_USER,
             password=DB_PASS,
-            port=DB_PORT
+            port=DB_PORT,
+            connect_timeout=8
         )
         return conn
     except Exception as e:
@@ -79,7 +80,8 @@ def get_db_connection():
 
 '''
 curl -X POST \
-  http://localhost/ingest/write-data \
+  http://$(minikube ip):31007/ingest/write-data \
+  -H "Host: localhost" \
   -H "Content-Type: application/json" \
   -d '{"name": "flow_rate_a", "value": 12.5}'; echo
 '''
@@ -115,7 +117,8 @@ def write_data(data: DataItem):
 
 
 '''
-curl http://localhost/ingest/read-data; echo
+curl -H "Host: localhost" \
+  http://$(minikube ip):31007/ingest/read-data; echo
 '''
 @app.get("/read-data", response_model=list[dict[str, Any]])
 def read_data():

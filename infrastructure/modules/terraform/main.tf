@@ -506,7 +506,8 @@ resource "kubectl_manifest" "app_deployment" {
 
   depends_on = [
     kubectl_manifest.app_service,
-    null_resource.rollout_trigger_deployment
+    null_resource.rollout_trigger_deployment,
+    null_resource.kind_image_load_app
   ]
 }
 
@@ -556,7 +557,8 @@ resource "kubectl_manifest" "app_statefulset" {
 
   depends_on = [
     kubectl_manifest.app_service,
-    null_resource.rollout_trigger_statefulset
+    null_resource.rollout_trigger_statefulset,
+    null_resource.kind_image_load_app
   ]
 }
 
