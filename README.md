@@ -135,6 +135,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
+* Figure out why embedding model does not give logs: probably not enough memory?
 * Make disk, RAM and GPU usage configurable for (minikube) cluster instead of hardcoding.
 * Test embedding model (for GPU support on minikube).
 * Azure infrastructure + common API with local.

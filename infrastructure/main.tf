@@ -99,7 +99,7 @@ module "development" {
     }
     */
 
-    /**/
+    /*
     pixie-ingest = {
       metadata = {
         app_name        = "pixie-ingest"
@@ -157,7 +157,8 @@ module "development" {
         path = "/ingest"
       }
     }
-    /*
+    */
+    /**/
     pixie-embedding-model = {
       metadata = {
         app_name        = "pixie-embedding-model"
@@ -172,16 +173,15 @@ module "development" {
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/embedding_model"
         request_cpu     = "128m"
-        request_memory  = "128Mi"
+        request_memory  = "1024Mi"
         limit_cpu       = "256m"
-        limit_memory    = "256Mi"
+        limit_memory    = "1024Mi"
         restart         = "Always" # Always (default), OnFailure, Never
       }
       ingress = {
         path = "/embedding-model"
       }
     }
-    */
     /*
     pixie-ingest-dup = {
       metadata = {

@@ -43,37 +43,42 @@ locals {
     if !var.cluster_create && try(v.statefulset, null) != null && try(v.statefulset.docker_context, null) != null
   }
 }
-
+/*
 resource "null_resource" "minikube_start_setup" {
+  count = var.cluster_create ? 0 : 1
+
   triggers = {
-    minikube_config = "docker-gpus-all-2048mb"
+    minikube_config = "docker-gpus-all-4096mb"
   }
 
   provisioner "local-exec" {
     command = <<-EOT
-      minikube start --driver=docker --gpus=all --cpus=4 --memory=6144mb --disk=80gb && export KUBE_CONTEXT=minikube && alias kubectl="minikube kubectl --"
+      minikube start --driver=docker --gpus=all --cpus=4 --memory=4096mb && export KUBE_CONTEXT=minikube && alias kubectl="minikube kubectl --"
     EOT
     on_failure = continue # Allow the command to fail without destroying the resource state
   }
 }
 
 resource "null_resource" "nvidia_device_plugin_deploy" {
+  count = var.cluster_create ? 0 : 1
   provisioner "local-exec" {
     command = "kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml"
   }
   depends_on = [null_resource.minikube_start_setup]
 }
+*/
 
 
 # TODO: alternative cluster for Azure
 
 resource "null_resource" "cluster_dependency" {
   count = var.deployment_target == "local" ? 1 : 0
-  depends_on = [null_resource.nvidia_device_plugin_deploy]
+  # depends_on = [null_resource.minikube_start_setup]
 }
 
 resource "null_resource" "cluster_dependency_azure" {
   count = var.deployment_target == "azure" ? 1 : 0
+  # TODO: depends_on
 }
 
 resource "kubectl_manifest" "project_namespace" {
@@ -270,6 +275,7 @@ resource "null_resource" "rollout_trigger_statefulset" {
 }
 
 # 2. Load the image into Kind for each app using for_each
+/*
 resource "null_resource" "kind_image_load_app" {
   for_each = (!var.cluster_create && var.deployment_target == "local") ? merge(docker_image.app, docker_image.remote_app) : {}
   #for_each = (var.cluster_create) ? {} : var.app_configs
@@ -294,6 +300,61 @@ resource "null_resource" "kind_image_load_app" {
     docker_image.remote_app,
   ]
 }
+*/
+# Define the temporary path for the tar file
+locals {
+  temp_dir = path.root # Use the root module directory for the temp file
+}
+
+# SAVE the Docker Image to a .tar File ---
+resource "null_resource" "image_save_to_tar" {
+  for_each = (!var.cluster_create && var.deployment_target == "local") ? merge(docker_image.app, docker_image.remote_app) : {}
+
+  triggers = {
+    # Unique identifier for the image (ID changes on rebuild/repull)
+    image_id = try(docker_image.app[each.key].image_id, docker_image.remote_app[each.key].image_id)
+    # The full image name:tag
+    image_name = try(docker_image.app[each.key].name, docker_image.remote_app[each.key].name)
+    # The path where the tar file will be saved
+    tar_path     = "${local.temp_dir}/${each.key}-image.tar"
+  }
+
+  provisioner "local-exec" {
+    # Command: docker image save <NAME> -o <PATH>
+    command = "docker image save ${self.triggers.image_name} -o ${self.triggers.tar_path}"
+  }
+
+  # Ensure the image is ready before saving
+  depends_on = [
+    docker_image.app,
+    docker_image.remote_app,
+  ]
+}
+
+
+# LOAD the .tar File into Minikube and CLEAN UP
+resource "null_resource" "kind_image_load_app" {
+  for_each = (!var.cluster_create && var.deployment_target == "local") ? merge(docker_image.app, docker_image.remote_app) : {}
+
+  triggers = {
+    # Depend on the save step completion
+    save_id      = null_resource.image_save_to_tar[each.key].id
+    tar_path     = null_resource.image_save_to_tar[each.key].triggers.tar_path
+    image_name   = null_resource.image_save_to_tar[each.key].triggers.image_name # Not strictly needed but helpful for logging
+    cluster_name = var.cluster_name
+  }
+
+  provisioner "local-exec" {
+    command = "minikube image load ${self.triggers.tar_path} && rm -f ${self.triggers.tar_path}"
+  }
+
+  # Ensure the save is complete before loading
+  depends_on = [
+    null_resource.image_save_to_tar,
+    kubectl_manifest.project_namespace[0], # Minikube must be running and accessible
+  ]
+}
+
 
 # 3. Rollout trigger (to redeploy on image rebuild) for each app using for_each
 resource "null_resource" "rollout_trigger" {
