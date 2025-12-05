@@ -90,9 +90,15 @@ spec:
           requests:
             cpu: ${request_cpu}
             memory: ${request_memory}
+%{ if gpu_used == true }
+            nvidia.com/gpu: ${request_gpu}
+%{ endif }
           limits:
             cpu: ${limit_cpu}
             memory: ${limit_memory}
+%{ if gpu_used == true }
+            nvidia.com/gpu: ${limit_gpu}
+%{ endif }
 
 %{ if liveness_probe_config.path != null || liveness_probe_config.command != null }
         livenessProbe:

@@ -3,7 +3,8 @@ from FlagEmbedding import FlagAutoModel
 import torch
 
 embedding_model = FlagAutoModel.from_finetuned(
-    "BAAI/bge-m3",
+    "BAAI/bge-small-en-v1.5",
+    # "BAAI/bge-m3",
     query_instruction_for_retrieval="Represent this sentence for searching relevant passages: ",
     devices="cuda:0",   # if not specified, will use all available gpus or cpu when no gpu available
 )

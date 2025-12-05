@@ -40,7 +40,6 @@ module "development" {
 
   app_configs = {
     /*
-    */
     database_server = {
       metadata = {
         app_name        = "pixie-db"
@@ -69,6 +68,7 @@ module "development" {
         }
       }
     }
+    */
     /*
     pixie-vector-db = {
       metadata = {
@@ -176,6 +176,8 @@ module "development" {
         request_memory  = "1024Mi"
         limit_cpu       = "256m"
         limit_memory    = "1024Mi"
+        request_gpu     = 1  # Request 1 GPU
+        limit_gpu       = 1  # Limit 1 GPU
         restart         = "Always" # Always (default), OnFailure, Never
       }
       ingress = {

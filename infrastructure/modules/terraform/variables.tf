@@ -63,8 +63,10 @@ variable "app_configs" {
       dockerfile_path         = optional(string, null)
       request_cpu             = string
       request_memory          = string
+      request_gpu             = optional(number, 0)
       limit_cpu               = string
       limit_memory            = string
+      limit_gpu               = optional(number, 0)
       platform_os             = optional(string, "linux")
       platform_architecture   = optional(string, "amd64")
       restart                 = optional(string, "Always")
@@ -111,8 +113,10 @@ variable "app_configs" {
       dockerfile_path        = string
       request_cpu            = string
       request_memory         = string
+      request_gpu            = optional(number, 0)
       limit_cpu              = string
       limit_memory           = string
+      limit_gpu              = optional(number, 0)
       platform_os            = optional(string, "linux")
       platform_architecture  = optional(string, "amd64")
       restart                = optional(string, "Always")

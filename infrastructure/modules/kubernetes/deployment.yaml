@@ -134,6 +134,12 @@ spec:
           requests:
             cpu: ${request_cpu} # e.g. "128m"
             memory: ${request_memory} # e.g. "256Mi"
+%{ if gpu_used == true }
+            nvidia.com/gpu: ${request_gpu}
+%{ endif }
           limits:
             cpu: ${limit_cpu} # e.g. "256m"
             memory: ${limit_memory} # e.g. "1Gi"
+%{ if gpu_used == true }
+            nvidia.com/gpu: ${limit_gpu}
+%{ endif }
