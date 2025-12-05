@@ -95,7 +95,7 @@ TODO
 ## Development: local deployment
 ```
 cd infrastructure/
-minikube start --driver=docker --gpus=all --memory=2048mb --disk=80gb
+minikube start --driver=docker --gpus=all --memory=6144mb
 export KUBE_CONTEXT=minikube
 alias kubectl="minikube kubectl --"
 kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
