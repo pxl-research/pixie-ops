@@ -98,8 +98,9 @@ cd infrastructure/
 # If using WSL2 on Windows (mount to get access to CUDA drivers):
 minikube start --driver=docker --container-runtime=docker --gpus=all --memory=4096mb --mount --mount-string="/usr/lib/wsl:/usr/lib/wsl"
 # Or on Linux:
-minikube start --driver=docker --container-runtime=docker --gpus=all --memory=4096mb
+minikube start --driver=docker --container-runtime=docker --gpus=all --memory=8192mb
 
+minikube addons enable nvidia-device-plugin
 export KUBE_CONTEXT=minikube
 alias kubectl="minikube kubectl --"
 kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.3/deployments/static/nvidia-device-plugin.yml
