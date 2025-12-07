@@ -83,12 +83,16 @@ spec:
       containers:
       - name: ${app_name}
         image: ${image_name}:${image_tag}
-%{ if length(app_env) > 0 }
+%{ if length(app_env) > 0 || (platform == "wsl2" && is_local_deployment == true) }
         env:
 %{ for key, value in app_env ~}
         - name: ${key}
           value: ${value}
 %{ endfor ~}
+%{ if platform == "wsl2" && is_local_deployment == true }
+        - name: LD_LIBRARY_PATH
+          value: "/usr/lib/wsl/lib"
+%{ endif }
 %{ endif ~}
 %{ if is_local_deployment == true }
         imagePullPolicy: Never
@@ -134,12 +138,22 @@ spec:
           requests:
             cpu: ${request_cpu} # e.g. "128m"
             memory: ${request_memory} # e.g. "256Mi"
-%{ if gpu_used == true }
-            nvidia.com/gpu: ${request_gpu}
-%{ endif }
           limits:
             cpu: ${limit_cpu} # e.g. "256m"
             memory: ${limit_memory} # e.g. "1Gi"
-%{ if gpu_used == true }
+%{ if limit_gpu > 0 }
             nvidia.com/gpu: ${limit_gpu}
+%{ endif }
+%{ if platform == "wsl2" && is_local_deployment == true }
+        volumeMounts:
+        - name: wsl-lib-mount
+          mountPath: /usr/lib/wsl
+          readOnly: true
+%{ endif }
+%{ if platform == "wsl2" && is_local_deployment == true }
+      volumes:
+      - name: wsl-lib-mount
+        hostPath:
+          path: /usr/lib/wsl
+          type: Directory
 %{ endif }

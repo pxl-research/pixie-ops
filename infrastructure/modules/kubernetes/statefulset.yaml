@@ -76,12 +76,16 @@ spec:
       containers:
       - name: ${app_name}
         image: ${image_name}:${image_tag}
-%{ if length(app_env) > 0 }
+%{ if length(app_env) > 0 || (platform == "wsl2" && is_local_deployment == true) }
         env:
 %{ for key, value in app_env ~}
         - name: ${key}
           value: ${value}
 %{ endfor ~}
+%{ if platform == "wsl2" && is_local_deployment == true }
+        - name: LD_LIBRARY_PATH
+          value: "/usr/lib/wsl/lib"
+%{ endif }
 %{ endif ~}
         ports:
         - containerPort: ${target_port}
@@ -90,13 +94,10 @@ spec:
           requests:
             cpu: ${request_cpu}
             memory: ${request_memory}
-%{ if gpu_used == true }
-            nvidia.com/gpu: ${request_gpu}
-%{ endif }
           limits:
             cpu: ${limit_cpu}
             memory: ${limit_memory}
-%{ if gpu_used == true }
+%{ if limit_gpu > 0 }
             nvidia.com/gpu: ${limit_gpu}
 %{ endif }
 
@@ -139,6 +140,18 @@ spec:
         - name: ${name}
           mountPath: ${volume.mount_path}
 %{ endfor }
+%{ if platform == "wsl2" && is_local_deployment == true }
+        - name: wsl-lib-mount
+          mountPath: /usr/lib/wsl
+          readOnly: true
+%{ endif }
+      volumes:
+%{ if platform == "wsl2" && is_local_deployment == true }
+      - name: wsl-lib-mount
+        hostPath:
+          path: /usr/lib/wsl
+          type: Directory
+%{ endif }
 
   # Creates a PVC for each replica, based on the defined data_volumes map
   # PVCs can be expanded but not shrunk, thus request only what you need.

@@ -95,15 +95,22 @@ TODO
 ## Development: local deployment
 ```
 cd infrastructure/
-minikube start --driver=docker --gpus=all --memory=6144mb
+# If using WSL2 on Windows (mount to get access to CUDA drivers):
+minikube start --driver=docker --container-runtime=docker --gpus=all --memory=4096mb --mount --mount-string="/usr/lib/wsl:/usr/lib/wsl"
+# Or on Linux:
+minikube start --driver=docker --container-runtime=docker --gpus=all --memory=4096mb
+
 export KUBE_CONTEXT=minikube
 alias kubectl="minikube kubectl --"
-kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.1/deployments/static/nvidia-device-plugin.yml
+kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.3/deployments/static/nvidia-device-plugin.yml
 kubectl describe node minikube | grep nvidia.com/gpu
 
 tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
+# If using WSL2 on Windows:
+tofu apply -var="platform=wsl2" -var="deployment_target=local" -var="gpu_used=true" -auto-approve
+# Or on Linux (default):
 tofu apply -var="deployment_target=local" -var="gpu_used=true" -auto-approve
 
 # Testing:

@@ -459,11 +459,11 @@ resource "kubectl_manifest" "app_deployment" {
     replica_count          = each.value.deployment.replica_count
     request_cpu            = each.value.deployment.request_cpu
     request_memory         = each.value.deployment.request_memory
-    request_gpu            = each.value.deployment.request_gpu
     limit_cpu              = each.value.deployment.limit_cpu
     limit_memory           = each.value.deployment.limit_memory
     limit_gpu              = each.value.deployment.limit_gpu
     restart                = each.value.deployment.restart
+    platform               = var.platform
     platform_os            = each.value.deployment.platform_os
     platform_architecture  = each.value.deployment.platform_architecture
 
@@ -522,12 +522,12 @@ resource "kubectl_manifest" "app_statefulset" {
       replica_count          = each.value.statefulset.replica_count
       request_cpu            = each.value.statefulset.request_cpu
       request_memory         = each.value.statefulset.request_memory
-      request_gpu            = each.value.statefulset.request_gpu
       limit_cpu              = each.value.statefulset.limit_cpu
       limit_memory           = each.value.statefulset.limit_memory
       limit_gpu              = each.value.statefulset.limit_gpu
       data_volumes           = each.value.statefulset.data_volumes
       restart                = each.value.statefulset.restart
+      platform               = var.platform
       platform_os            = each.value.statefulset.platform_os
       platform_architecture  = each.value.statefulset.platform_architecture
       liveness_probe_config  = merge(local.default_liveness_probe, try(each.value.statefulset.liveness_probe, {}))

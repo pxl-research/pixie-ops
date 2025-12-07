@@ -13,6 +13,7 @@ module "development" {
   cluster_create          = var.cluster_create
   deployment_target       = var.deployment_target
   gpu_used                = var.gpu_used
+  platform                = var.platform
 
   # Main configuration
   # ------------------
@@ -176,8 +177,7 @@ module "development" {
         request_memory  = "1024Mi"
         limit_cpu       = "256m"
         limit_memory    = "1024Mi"
-        request_gpu     = 1  # Request 1 GPU
-        limit_gpu       = 1  # Limit 1 GPU
+        limit_gpu       = 1
         restart         = "Always" # Always (default), OnFailure, Never
       }
       ingress = {

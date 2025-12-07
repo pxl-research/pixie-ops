@@ -4,6 +4,12 @@ variable "cluster_create" {
   default     = false
 }
 
+variable "platform" {
+  description = "Operating System or platform. Can be: wsl2 or linux."
+  type        = string
+  default     = "linux"
+}
+
 variable "deployment_target" {
   description = "Deployment target. Can be 'local' or 'azure'."
   type        = string
@@ -63,7 +69,6 @@ variable "app_configs" {
       dockerfile_path         = optional(string, null)
       request_cpu             = string
       request_memory          = string
-      request_gpu             = optional(number, 0)
       limit_cpu               = string
       limit_memory            = string
       limit_gpu               = optional(number, 0)
@@ -113,7 +118,6 @@ variable "app_configs" {
       dockerfile_path        = string
       request_cpu            = string
       request_memory         = string
-      request_gpu            = optional(number, 0)
       limit_cpu              = string
       limit_memory           = string
       limit_gpu              = optional(number, 0)
