@@ -100,13 +100,17 @@ minikube start --driver=docker --container-runtime=docker --gpus=all --memory=40
 # Or on Linux:
 minikube start --driver=docker --container-runtime=docker --gpus=all --memory=8192mb
 
-minikube addons enable nvidia-device-plugin
-export KUBE_CONTEXT=minikube
-alias kubectl="minikube kubectl --"
-kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.3/deployments/static/nvidia-device-plugin.yml
+# NOT necessary anymore: minikube addons enable nvidia-device-plugin
+# NOT necessary anymore: export KUBE_CONTEXT=minikube
+# NOT necessary anymore: alias kubectl="minikube kubectl --"
+# NOT necessary anymore: kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.3/deployments/static/nvidia-device-plugin.yml
+
+# Wait until this gives results:
 kubectl describe node minikube | grep nvidia.com/gpu
 
 tofu destroy # if necessary, or when having an error
+minikube delete
+
 tofu init
 tofu plan
 # If using WSL2 on Windows:

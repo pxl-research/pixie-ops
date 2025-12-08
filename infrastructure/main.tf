@@ -1,4 +1,5 @@
 locals {
+  # Variables which can occur in multiple places in configuration
   apps_path = "${path.module}/../apps"
   ingress_port = 80
 }
