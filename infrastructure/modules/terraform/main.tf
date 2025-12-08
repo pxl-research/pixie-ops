@@ -72,7 +72,7 @@ resource "null_resource" "nvidia_device_plugin_deploy" {
 # TODO: alternative cluster for Azure
 
 resource "null_resource" "cluster_dependency" {
-  count = var.deployment_target == "local" ? 1 : 0
+  count = var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux" ? 1 : 0
   # depends_on = [null_resource.minikube_start_setup]
 }
 
@@ -118,7 +118,7 @@ resource "null_resource" "install_nginx_gateway" {
 }
 
 resource "null_resource" "install_local_path_provisioner" {
-  count = (!var.cluster_create && var.deployment_target == "local") ? 1 : 0
+  count = (!var.cluster_create && (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux")) ? 1 : 0
   triggers = {
     version = "v0.0.32"
   }
@@ -277,7 +277,7 @@ resource "null_resource" "rollout_trigger_statefulset" {
 # 2. Load the image into Kind for each app using for_each
 /*
 resource "null_resource" "kind_image_load_app" {
-  for_each = (!var.cluster_create && var.deployment_target == "local") ? merge(docker_image.app, docker_image.remote_app) : {}
+  for_each = (!var.cluster_create && (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux")) ? merge(docker_image.app, docker_image.remote_app) : {}
   #for_each = (var.cluster_create) ? {} : var.app_configs
 
   triggers = {
@@ -308,7 +308,7 @@ locals {
 
 # SAVE the Docker Image to a .tar File ---
 resource "null_resource" "image_save_to_tar" {
-  for_each = (!var.cluster_create && var.deployment_target == "local") ? merge(docker_image.app, docker_image.remote_app) : {}
+  for_each = (!var.cluster_create && (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux")) ? merge(docker_image.app, docker_image.remote_app) : {}
 
   triggers = {
     # Unique identifier for the image (ID changes on rebuild/repull)

@@ -108,7 +108,7 @@ minikube start --driver=docker --container-runtime=docker --gpus=all --memory=81
 # Wait until this gives results:
 kubectl describe node minikube | grep nvidia.com/gpu
 
-tofu destroy # if necessary, or when having an error
+tofu destroy -auto-approve # if necessary, or when having an error
 minikube delete
 
 tofu init
@@ -125,6 +125,8 @@ curl -H "Host: localhost" http://$(minikube ip):31007/ingest/status/{workflow_id
 
 # Turn off cluster or delete it:
 minikube stop
+
+tofu destroy -auto-approve
 minikube delete
 ```
 
