@@ -12,7 +12,6 @@ module "development" {
   cluster_create          = var.cluster_create
   deployment_target       = var.deployment_target
   gpu_used                = var.gpu_used
-  platform                = var.platform
 
   # Main configuration
   # ------------------

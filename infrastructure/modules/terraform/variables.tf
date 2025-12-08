@@ -4,16 +4,10 @@ variable "cluster_create" {
   default     = false
 }
 
-variable "platform" {
-  description = "Operating System or platform. Can be: wsl2 or linux."
-  type        = string
-  default     = "linux"
-}
-
 variable "deployment_target" {
-  description = "Deployment target. Can be 'local' or 'azure'."
+  description = "Deployment target. Can be 'local_wsl2', 'local_linux' or 'azure'"
   type        = string
-  default     = "local"
+  default     = "local_wsl2"
 }
 
 variable "gpu_used" {

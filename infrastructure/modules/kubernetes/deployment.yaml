@@ -83,13 +83,13 @@ spec:
       containers:
       - name: ${app_name}
         image: ${image_name}:${image_tag}
-%{ if length(app_env) > 0 || (platform == "wsl2" && deployment_target == "local") }
+%{ if length(app_env) > 0 || (deployment_target == "local_wsl2") }
         env:
 %{ for key, value in app_env ~}
         - name: ${key}
           value: ${value}
 %{ endfor ~}
-%{ if platform == "wsl2" && deployment_target == "local" }
+%{ if deployment_target == "local_wsl2" }
         - name: LD_LIBRARY_PATH
           value: "/usr/lib/wsl/lib"
 %{ endif }
@@ -144,13 +144,13 @@ spec:
 %{ if limit_gpu > 0 }
             nvidia.com/gpu: ${limit_gpu}
 %{ endif }
-%{ if platform == "wsl2" && deployment_target == "local" }
+%{ if deployment_target == "local_wsl2" }
         volumeMounts:
         - name: wsl-lib-mount
           mountPath: /usr/lib/wsl
           readOnly: true
 %{ endif }
-%{ if platform == "wsl2" && deployment_target == "local" }
+%{ if deployment_target == "local_wsl2" }
       volumes:
       - name: wsl-lib-mount
         hostPath:

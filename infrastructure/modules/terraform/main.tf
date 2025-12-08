@@ -462,7 +462,6 @@ resource "kubectl_manifest" "app_deployment" {
     limit_memory           = each.value.deployment.limit_memory
     limit_gpu              = each.value.deployment.limit_gpu
     restart                = each.value.deployment.restart
-    platform               = var.platform
     platform_os            = each.value.deployment.platform_os
     platform_architecture  = each.value.deployment.platform_architecture
 
@@ -526,7 +525,6 @@ resource "kubectl_manifest" "app_statefulset" {
       limit_gpu              = each.value.statefulset.limit_gpu
       data_volumes           = each.value.statefulset.data_volumes
       restart                = each.value.statefulset.restart
-      platform               = var.platform
       platform_os            = each.value.statefulset.platform_os
       platform_architecture  = each.value.statefulset.platform_architecture
       liveness_probe_config  = merge(local.default_liveness_probe, try(each.value.statefulset.liveness_probe, {}))

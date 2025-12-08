@@ -110,9 +110,9 @@ tofu destroy # if necessary, or when having an error
 tofu init
 tofu plan
 # If using WSL2 on Windows:
-tofu apply -var="platform=wsl2" -var="deployment_target=local" -var="gpu_used=true" -auto-approve
+tofu apply -var="deployment_target=local_wsl2" -var="gpu_used=true" -auto-approve
 # Or on Linux (default):
-tofu apply -var="deployment_target=local" -var="gpu_used=true" -auto-approve
+tofu apply -var="deployment_target=local_linux" -var="gpu_used=true" -auto-approve
 
 # Testing:
 curl -H "Host: localhost" http://$(minikube ip):31007/ingest; echo
