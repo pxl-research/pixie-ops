@@ -93,7 +93,11 @@ spec:
         imagePullPolicy: Always
 %{ endif }
         ports:
-        - containerPort: ${target_port}
+%{ for port in ports ~}
+        - name: ${port.name}
+          containerPort: ${port.target_port}
+          protocol: ${port.protocol}
+%{ endfor ~}
         # Resource requests and limits
         resources:
           requests:
@@ -111,7 +115,7 @@ spec:
 %{ if liveness_probe_config.path != null } # HTTP GET Probe
           httpGet:
             path: ${liveness_probe_config.path}
-            port: ${target_port}
+            port: ${liveness_probe_config.target_port}
 %{ else } # EXEC Command Probe
           exec:
             command: ${jsonencode(liveness_probe_config.command)}
@@ -127,7 +131,7 @@ spec:
 %{ if readiness_probe_config.path != null } # HTTP GET Probe
           httpGet:
             path: ${readiness_probe_config.path}
-            port: ${target_port}
+            port: ${readiness_probe_config.target_port}
 %{ else } # EXEC Command Probe
           exec:
             command: ${jsonencode(readiness_probe_config.command)}

@@ -425,8 +425,7 @@ resource "kubectl_manifest" "app_service" {
   yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
     app_name            = each.value.service.app_name
     namespace_name      = var.project_namespace_name
-    target_port         = each.value.service.target_port
-    service_port        = each.value.service.service_port
+    ports               = each.value.service.ports
   })
   depends_on = [
     null_resource.cluster_dependency,
@@ -450,7 +449,7 @@ resource "kubectl_manifest" "app_deployment" {
     app_name               = each.value.service.app_name
     namespace_name         = var.project_namespace_name
     deployment_target      = var.deployment_target
-    target_port            = each.value.service.target_port
+    ports                  = each.value.service.ports
     image_name             = each.value.deployment.image_name
     image_tag              = each.value.deployment.image_tag
     rollout_trigger        = try(null_resource.rollout_trigger_deployment[each.key].triggers.app_source_hash, "")
@@ -512,7 +511,7 @@ resource "kubectl_manifest" "app_statefulset" {
       app_name               = each.value.service.app_name
       namespace_name         = var.project_namespace_name
       deployment_target      = var.deployment_target
-      target_port            = each.value.service.target_port
+      ports                  = each.value.service.ports
       image_name             = each.value.statefulset.image_name
       image_tag              = each.value.statefulset.image_tag
       rollout_trigger        = null_resource.rollout_trigger_statefulset[each.key].triggers.app_source_hash

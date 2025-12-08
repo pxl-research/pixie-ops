@@ -48,11 +48,14 @@ variable "storage_classes" {
 variable "app_configs" {
   description = "A map containing configuration details for dynamic application deployment (Docker, k8s manifest values)."
   type = map(object({
-
     service = object({
-      app_name    = string
-      target_port = number
-      service_port = number
+      app_name = string
+      ports = list(object({
+        name          = string
+        target_port   = number
+        service_port  = number
+        protocol      = string
+      }))
     })
 
     deployment = optional(object({
@@ -86,6 +89,7 @@ variable "app_configs" {
         exec_command: optional(list(string)),
       })), {})
       liveness_probe = optional(object({
+        target_port           = number
         path                  = optional(string, null)       # for httpGet
         command               = optional(list(string), null) # for exec (e.g., ["sh", "-c", "curl -f http://localhost:8000/livez || exit 1"])
         initial_delay_seconds = optional(number, 60)
@@ -94,6 +98,7 @@ variable "app_configs" {
         failure_threshold     = optional(number, 3)
       }), null)
       readiness_probe = optional(object({
+        target_port           = number
         path                  = optional(string, null)       # for httpGet
         command               = optional(list(string), null) # for exec
         initial_delay_seconds = optional(number, 30)
@@ -135,6 +140,7 @@ variable "app_configs" {
         exec_command: optional(list(string)),
       })), {})
       liveness_probe = optional(object({
+        target_port           = number
         path                  = optional(string, null)       # for httpGet
         command               = optional(list(string), null) # for exec (e.g., ["sh", "-c", "curl -f http://localhost:8000/livez || exit 1"])
         initial_delay_seconds = optional(number, 60)
@@ -143,6 +149,7 @@ variable "app_configs" {
         failure_threshold     = optional(number, 3)
       }), null)
       readiness_probe = optional(object({
+        target_port           = number
         path                  = optional(string, null)       # for httpGet
         command               = optional(list(string), null) # for exec
         initial_delay_seconds = optional(number, 30)
@@ -159,9 +166,9 @@ variable "app_configs" {
       }))
     }), null)
 
-    service = optional(object({
-      type = string
-    }), null)
+    # service = optional(object({
+    #   type = string
+    # }), null)
 
     ingress = optional(object({
       path = string

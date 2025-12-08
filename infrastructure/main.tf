@@ -42,10 +42,18 @@ module "development" {
     /*
     database_server = {
       service = {
-        app_name        = "pixie-db"
-        target_port     = 5432
-        service_port    = 5432
+        app_name            = "pixie-db"
+        ports = [
+          {
+            name            = "http"
+            target_port     = 5432
+            service_port    = 5432
+            protocol        = "TCP"
+          }
+        ]
       }
+
+
       statefulset = {
         replica_count   = 1
         image_name      = "pixie-db"
@@ -73,9 +81,22 @@ module "development" {
     pixie-vector-db = {
       service = {
         app_name        = "pixie-vector-db"
-        target_port     = 6333
-        service_port    = 6333
+        ports = [
+          {
+            name            = "http"
+            target_port     = 6333
+            service_port    = 6333
+            protocol        = "TCP"
+          },
+          {
+            name            = "grpc"
+            target_port     = 6334
+            service_port    = 6334
+            protocol        = "TCP"
+          }
+        ]
       }
+
       statefulset = {
         replica_count   = 1
         image_name      = "pixie-vector-db"
@@ -103,9 +124,16 @@ module "development" {
     pixie-ingest = {
       service = {
         app_name        = "pixie-ingest"
-        target_port     = 8080
-        service_port    = local.ingress_port
+        ports = [
+          {
+            name            = "http"
+            target_port     = 8080
+            service_port    = local.ingress_port
+            protocol        = "TCP"
+          }
+        ]
       }
+
       deployment = {
         replica_count   = 1
 
@@ -135,6 +163,7 @@ module "development" {
         # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
+          target_port           = 8080
           # Using an exec command similar to Docker Compose healthcheck 'test'
           command               = ["sh", "-c", "wget -q -O /dev/null http://localhost:${8080}/livez || exit 1"]
           # path                  = "/livez" # or we can use the path
@@ -144,6 +173,7 @@ module "development" {
           failure_threshold     = 3
         }
         readiness_probe = {
+          target_port           = 8080
           # Readiness continues to use the HTTP GET path
           path                  = "/readyz"
           initial_delay_seconds = 30
@@ -162,8 +192,14 @@ module "development" {
     pixie-embedding-model = {
       service = {
         app_name        = "pixie-embedding-model"
-        target_port     = 8000
-        service_port    = local.ingress_port
+        ports = [
+          {
+            name            = "http"
+            target_port     = 8000
+            service_port    = local.ingress_port
+            protocol        = "TCP"
+          }
+        ]
       }
       deployment = {
         replica_count   = 1
@@ -186,10 +222,17 @@ module "development" {
     /*
     pixie-ingest-dup = {
       service = {
-        app_name        = "pixie-ingest-dup"
-        target_port     = 8080
-        service_port    = local.ingress_port
+        app_name            = "pixie-ingest-dup"
+        ports = [
+          {
+            name            = "http"
+            target_port     = 8080
+            service_port    = local.ingress_port
+            protocol        = "TCP"
+          }
+        ]
       }
+
       deployment = {
         replica_count   = 1
 
@@ -219,7 +262,8 @@ module "development" {
         # NOTE: Probes are run from the container, not externally and thus not via ingress controller or gateway!!!
         # So we use INTERNAL port number and internal path.
         liveness_probe = {
-          # Using an exec command similar to Docker Compose healthcheck 'test'
+          target_port           = 8080
+        # Using an exec command similar to Docker Compose healthcheck 'test'
           command               = ["sh", "-c", "wget -q -O /dev/null http://localhost:${8080}/livez || exit 1"]
           # path                  = "/livez" # or we can use the path
           initial_delay_seconds = 60
@@ -229,6 +273,7 @@ module "development" {
         }
         readiness_probe = {
           # Readiness continues to use the HTTP GET path
+          target_port           = 8080
           path                  = "/readyz"
           initial_delay_seconds = 30
           period_seconds        = 300

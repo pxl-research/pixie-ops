@@ -27,7 +27,9 @@ spec:
   selector:
     app: ${app_name}
   ports:
-    - name: http
-      port: ${service_port} # Internal port or port the Gateway or Ingress Controller will target
-      targetPort: ${target_port} # The container port to forward traffic to
-      protocol: TCP
+%{ for port in ports ~}
+    - name: ${port.name}
+      port: ${port.service_port} # Internal port or port the Gateway/Ingress Controller targets
+      targetPort: ${port.target_port} # The container port to forward traffic to
+      protocol: ${port.protocol}
+%{ endfor ~}
