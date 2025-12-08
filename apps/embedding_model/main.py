@@ -18,8 +18,6 @@ def root():
 @app.get("/embed")
 def embed():
     queries = ["Hello"]
-    #q_embedding = embedding_model.encode_queries(query)["dense_vecs"]
     q_embedding = embedding_model.encode_queries(queries)
 
-    #return q_embedding.tolist()[:3]
     return q_embedding[0].tolist()[:3]
