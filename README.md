@@ -150,10 +150,7 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Extra GPU deployment and statefulset options
-* Figure out why embedding model does not give logs for bge-m3 but not the small model: probably not enough memory? => test on workstation
-* Make disk, RAM and GPU usage configurable for (minikube) cluster instead of hardcoding.
-* Test embedding model (for GPU support on minikube).
+* Command (see informer-api https://github.com/pxl-research/PiXie/blob/informer_branch/docker-compose.yml)
 * Azure infrastructure + common API with local.
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!
