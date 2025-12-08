@@ -41,7 +41,7 @@ module "development" {
   app_configs = {
     /*
     database_server = {
-      metadata = {
+      service = {
         app_name        = "pixie-db"
         target_port     = 5432
         service_port    = 5432
@@ -71,7 +71,7 @@ module "development" {
     */
     /*
     pixie-vector-db = {
-      metadata = {
+      service = {
         app_name        = "pixie-vector-db"
         target_port     = 6333
         service_port    = 6333
@@ -101,7 +101,7 @@ module "development" {
 
     /*
     pixie-ingest = {
-      metadata = {
+      service = {
         app_name        = "pixie-ingest"
         target_port     = 8080
         service_port    = local.ingress_port
@@ -160,7 +160,7 @@ module "development" {
     */
     /**/
     pixie-embedding-model = {
-      metadata = {
+      service = {
         app_name        = "pixie-embedding-model"
         target_port     = 8000
         service_port    = local.ingress_port
@@ -185,7 +185,7 @@ module "development" {
     }
     /*
     pixie-ingest-dup = {
-      metadata = {
+      service = {
         app_name        = "pixie-ingest-dup"
         target_port     = 8080
         service_port    = local.ingress_port

@@ -49,7 +49,7 @@ variable "app_configs" {
   description = "A map containing configuration details for dynamic application deployment (Docker, k8s manifest values)."
   type = map(object({
 
-    metadata = object({
+    service = object({
       app_name    = string
       target_port = number
       service_port = number

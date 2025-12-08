@@ -408,7 +408,7 @@ locals {
       for dep_app_name, dep_override in try(app_cfg.deployment.depends_on, {}) :
       dep_app_name => merge(
         {
-          service_port = var.app_configs[dep_app_name].metadata.service_port
+          service_port = var.app_configs[dep_app_name].service.service_port
           ready_path   = local.get_dep_ready_path[dep_app_name]
         },
         dep_override
@@ -423,10 +423,10 @@ resource "kubectl_manifest" "app_service" {
   for_each = var.cluster_create ? {} : var.app_configs
 
   yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
-    app_name            = each.value.metadata.app_name
+    app_name            = each.value.service.app_name
     namespace_name      = var.project_namespace_name
-    target_port         = each.value.metadata.target_port
-    service_port        = each.value.metadata.service_port
+    target_port         = each.value.service.target_port
+    service_port        = each.value.service.service_port
   })
   depends_on = [
     null_resource.cluster_dependency,
@@ -447,10 +447,10 @@ resource "kubectl_manifest" "app_deployment" {
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/deployment.yaml", {
-    app_name               = each.value.metadata.app_name
+    app_name               = each.value.service.app_name
     namespace_name         = var.project_namespace_name
     deployment_target      = var.deployment_target
-    target_port            = each.value.metadata.target_port
+    target_port            = each.value.service.target_port
     image_name             = each.value.deployment.image_name
     image_tag              = each.value.deployment.image_tag
     rollout_trigger        = try(null_resource.rollout_trigger_deployment[each.key].triggers.app_source_hash, "")
@@ -509,10 +509,10 @@ resource "kubectl_manifest" "app_statefulset" {
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/statefulset.yaml", {
-      app_name               = each.value.metadata.app_name
+      app_name               = each.value.service.app_name
       namespace_name         = var.project_namespace_name
       deployment_target      = var.deployment_target
-      target_port            = each.value.metadata.target_port
+      target_port            = each.value.service.target_port
       image_name             = each.value.statefulset.image_name
       image_tag              = each.value.statefulset.image_tag
       rollout_trigger        = null_resource.rollout_trigger_statefulset[each.key].triggers.app_source_hash
@@ -560,7 +560,7 @@ resource "kubectl_manifest" "http_route" {
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/httproute.yaml", {
-    app_name          = each.value.metadata.app_name
+    app_name          = each.value.service.app_name
     namespace_name    = var.project_namespace_name
     ingress_host      = var.ingress_host
     ingress_path      = each.value.ingress.path
