@@ -37,7 +37,7 @@ spec:
                 operator: In
                 values:
                 - ${platform_architecture}
-%{ if deployment_target != "local" }
+%{ if deployment_target != "local_wsl2" || deployment_target != "local_linux" }
       imagePullSecrets:
       - name: ${image_pull_secret_name}
 %{ endif }
@@ -87,6 +87,11 @@ spec:
           value: "/usr/lib/wsl/lib"
 %{ endif }
 %{ endif ~}
+%{ if deployment_target == "local_wsl2" || deployment_target == "local_linux" }
+        imagePullPolicy: Never
+%{ else }
+        imagePullPolicy: Always
+%{ endif }
         ports:
         - containerPort: ${target_port}
         # Resource requests and limits
