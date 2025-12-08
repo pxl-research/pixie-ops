@@ -334,7 +334,7 @@ resource "null_resource" "image_save_to_tar" {
 
 # LOAD the .tar File into Minikube and CLEAN UP
 resource "null_resource" "kind_image_load_app" {
-  for_each = (!var.cluster_create && var.deployment_target == "local") ? merge(docker_image.app, docker_image.remote_app) : {}
+  for_each = (!var.cluster_create && (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux")) ? merge(docker_image.app, docker_image.remote_app) : {}
 
   triggers = {
     # Depend on the save step completion

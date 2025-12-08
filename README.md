@@ -100,8 +100,9 @@ minikube start --driver=docker --container-runtime=docker --gpus=all --memory=40
 # Or on Linux:
 minikube start --driver=docker --container-runtime=docker --gpus=all --memory=8192mb
 
+export KUBE_CONTEXT=minikube
+
 # NOT necessary anymore: minikube addons enable nvidia-device-plugin
-# NOT necessary anymore: export KUBE_CONTEXT=minikube
 # NOT necessary anymore: alias kubectl="minikube kubectl --"
 # NOT necessary anymore: kubectl apply -f https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.3/deployments/static/nvidia-device-plugin.yml
 
