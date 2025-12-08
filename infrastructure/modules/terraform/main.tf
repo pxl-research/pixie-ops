@@ -425,7 +425,6 @@ resource "kubectl_manifest" "app_service" {
   yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
     app_name            = each.value.metadata.app_name
     namespace_name      = var.project_namespace_name
-    is_local_deployment = var.is_local_deployment
     target_port         = each.value.metadata.target_port
     service_port        = each.value.metadata.service_port
   })
@@ -450,7 +449,7 @@ resource "kubectl_manifest" "app_deployment" {
   yaml_body = templatefile("${var.k8s_base_path}/deployment.yaml", {
     app_name               = each.value.metadata.app_name
     namespace_name         = var.project_namespace_name
-    is_local_deployment    = var.is_local_deployment
+    deployment_target      = var.deployment_target
     target_port            = each.value.metadata.target_port
     image_name             = each.value.deployment.image_name
     image_tag              = each.value.deployment.image_tag
@@ -513,7 +512,7 @@ resource "kubectl_manifest" "app_statefulset" {
   yaml_body = templatefile("${var.k8s_base_path}/statefulset.yaml", {
       app_name               = each.value.metadata.app_name
       namespace_name         = var.project_namespace_name
-      is_local_deployment    = var.is_local_deployment
+      deployment_target      = var.deployment_target
       target_port            = each.value.metadata.target_port
       image_name             = each.value.statefulset.image_name
       image_tag              = each.value.statefulset.image_tag

@@ -44,7 +44,7 @@ spec:
                 operator: In
                 values:
                 - ${platform_architecture} # TODO: make configurable
-%{ if is_local_deployment == false }
+%{ if deployment_target != "local"}
       imagePullSecrets:
       - name: ${image_pull_secret_name}
 %{ endif }
@@ -83,18 +83,18 @@ spec:
       containers:
       - name: ${app_name}
         image: ${image_name}:${image_tag}
-%{ if length(app_env) > 0 || (platform == "wsl2" && is_local_deployment == true) }
+%{ if length(app_env) > 0 || (platform == "wsl2" && deployment_target == "local") }
         env:
 %{ for key, value in app_env ~}
         - name: ${key}
           value: ${value}
 %{ endfor ~}
-%{ if platform == "wsl2" && is_local_deployment == true }
+%{ if platform == "wsl2" && deployment_target == "local" }
         - name: LD_LIBRARY_PATH
           value: "/usr/lib/wsl/lib"
 %{ endif }
 %{ endif ~}
-%{ if is_local_deployment == true }
+%{ if deployment_target == "local" }
         imagePullPolicy: Never
 %{ else }
         imagePullPolicy: Always
@@ -144,13 +144,13 @@ spec:
 %{ if limit_gpu > 0 }
             nvidia.com/gpu: ${limit_gpu}
 %{ endif }
-%{ if platform == "wsl2" && is_local_deployment == true }
+%{ if platform == "wsl2" && deployment_target == "local" }
         volumeMounts:
         - name: wsl-lib-mount
           mountPath: /usr/lib/wsl
           readOnly: true
 %{ endif }
-%{ if platform == "wsl2" && is_local_deployment == true }
+%{ if platform == "wsl2" && deployment_target == "local" }
       volumes:
       - name: wsl-lib-mount
         hostPath:

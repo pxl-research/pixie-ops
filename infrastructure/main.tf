@@ -6,7 +6,6 @@ locals {
 module "development" {
   k8s_base_path           = "${path.module}/modules/kubernetes"
   source = "./modules/terraform"
-  is_local_deployment     = true
 
   # Build argument
   # --------------

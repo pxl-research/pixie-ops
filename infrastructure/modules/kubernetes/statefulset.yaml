@@ -37,7 +37,7 @@ spec:
                 operator: In
                 values:
                 - ${platform_architecture}
-%{ if is_local_deployment == false }
+%{ if deployment_target != "local" }
       imagePullSecrets:
       - name: ${image_pull_secret_name}
 %{ endif }
@@ -76,13 +76,13 @@ spec:
       containers:
       - name: ${app_name}
         image: ${image_name}:${image_tag}
-%{ if length(app_env) > 0 || (platform == "wsl2" && is_local_deployment == true) }
+%{ if length(app_env) > 0 || (platform == "wsl2" && deployment_target == "local") }
         env:
 %{ for key, value in app_env ~}
         - name: ${key}
           value: ${value}
 %{ endfor ~}
-%{ if platform == "wsl2" && is_local_deployment == true }
+%{ if platform == "wsl2" && deployment_target == "local" }
         - name: LD_LIBRARY_PATH
           value: "/usr/lib/wsl/lib"
 %{ endif }
@@ -140,13 +140,13 @@ spec:
         - name: ${name}
           mountPath: ${volume.mount_path}
 %{ endfor }
-%{ if platform == "wsl2" && is_local_deployment == true }
+%{ if platform == "wsl2" && deployment_target == "local" }
         - name: wsl-lib-mount
           mountPath: /usr/lib/wsl
           readOnly: true
 %{ endif }
       volumes:
-%{ if platform == "wsl2" && is_local_deployment == true }
+%{ if platform == "wsl2" && deployment_target == "local" }
       - name: wsl-lib-mount
         hostPath:
           path: /usr/lib/wsl

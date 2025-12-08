@@ -188,12 +188,6 @@ variable "base_images_to_load" {
   default     = []
 }
 
-variable "is_local_deployment" {
-  description = "Boolean indicating if the deployment is targeting a local cluster (e.g., kind). Used for image pull policies."
-  type        = bool
-  default     = true
-}
-
 variable "ingress_host" {
   description = "The host name to configure in the Kubernetes Ingress resources."
   type        = string
