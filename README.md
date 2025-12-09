@@ -151,7 +151,6 @@ curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o 
 ```
 
 ## TODO list:
-* Command (see informer-api https://github.com/pxl-research/PiXie/blob/informer_branch/docker-compose.yml)
 * Azure infrastructure + common API with local.
 * Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!

@@ -419,8 +419,11 @@ locals {
 
 # 5. Create Kubernetes Service for each app using for_each
 resource "kubectl_manifest" "app_service" {
-  # Use conditional map: empty map if true, app_configs if false
-  for_each = var.cluster_create ? {} : var.app_configs
+  # for_each = var.cluster_create ? {} : var.app_configs
+  for_each = {
+    for k, v in var.app_configs : k => v
+    if !var.cluster_create && try(v.service, null) != null && toset(v.profiles) == toset(var.profiles)
+  }
 
   yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
     app_name            = each.value.service.app_name
@@ -442,7 +445,7 @@ resource "kubectl_manifest" "app_deployment" {
   # Filter the map to only include apps that have a deployment config AND cluster_create is false
   for_each = {
     for k, v in var.app_configs : k => v
-    if !var.cluster_create && try(v.deployment, null) != null
+    if !var.cluster_create && try(v.deployment, null) != null && toset(v.profiles) == toset(var.profiles)
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/deployment.yaml", {
@@ -505,7 +508,7 @@ resource "kubectl_manifest" "app_deployment" {
 resource "kubectl_manifest" "app_statefulset" {
   for_each = {
     for k, v in var.app_configs : k => v
-    if !var.cluster_create && try(v.statefulset, null) != null
+    if !var.cluster_create && try(v.statefulset, null) != null && toset(v.profiles) == toset(var.profiles)
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/statefulset.yaml", {

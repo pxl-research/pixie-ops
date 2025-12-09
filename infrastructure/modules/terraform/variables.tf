@@ -16,6 +16,11 @@ variable "gpu_used" {
   default     = false
 }
 
+variable "profiles" {
+  type    = list(string)
+  default = ["all"]
+}
+
 variable "cluster_name" {
   description = "The name to assign to the Kubernetes cluster (e.g., kind cluster name)."
   type        = string
@@ -48,6 +53,8 @@ variable "storage_classes" {
 variable "app_configs" {
   description = "A map containing configuration details for dynamic application deployment (Docker, k8s manifest values)."
   type = map(object({
+    profiles = optional(list(string), ["all"])
+
     service = object({
       app_name = string
       ports = list(object({

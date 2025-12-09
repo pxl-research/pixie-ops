@@ -15,3 +15,8 @@ variable "gpu_used" {
   type        = bool
   default     = false
 }
+
+variable "profiles" {
+  type    = list(string)
+  default = ["all"]
+}
