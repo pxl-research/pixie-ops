@@ -116,9 +116,9 @@ minikube delete
 tofu init
 tofu plan
 # If using WSL2 on Windows:
-tofu apply -var="deployment_target=local_wsl2" -var="gpu_used=true" -auto-approve
+tofu apply -var="deployment_target=local_wsl2" -var="gpu_used=true" -var="profiles=['all']" -auto-approve
 # Or on Linux (default):
-tofu apply -var="deployment_target=local_linux" -var="gpu_used=true" -auto-approve
+tofu apply -var="deployment_target=local_linux" -var="gpu_used=true" -var="profiles=['all']" -auto-approve
 
 # Testing:
 curl -H "Host: localhost" http://$(minikube ip):31007/ingest; echo
