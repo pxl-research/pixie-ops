@@ -50,7 +50,7 @@ variable "storage_classes" {
   default = {}
 }
 
-variable "app_configs" {
+variable "services" {
   description = "A map containing configuration details for dynamic application deployment (Docker, k8s manifest values)."
   type = map(object({
     profiles = optional(list(string), ["all"])

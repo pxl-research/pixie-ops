@@ -22,7 +22,7 @@ locals {
   nginx_gateway_version = "v2.2.0"
 
   app_file_hashes_deployment = {
-    for k, v in var.app_configs : k =>
+    for k, v in var.services : k =>
     # Recursively get all files in the Docker build context
     sha1(join("", [
       for f in sort(fileset(v.deployment.docker_context, "**")) :
@@ -33,7 +33,7 @@ locals {
   }
 
   app_file_hashes_statefulset = {
-    for k, v in var.app_configs : k =>
+    for k, v in var.services : k =>
     # Recursively get all files in the Docker build context
     sha1(join("", [
       for f in sort(fileset(v.statefulset.docker_context, "**")) :
@@ -206,7 +206,7 @@ resource "kubectl_manifest" "hera_rbac" {
 # Build the local Docker image for each app using for_each
 resource "docker_image" "app" {
   for_each = {
-    for k, v in var.app_configs : k => v
+    for k, v in var.services : k => v
     if !var.cluster_create && ((v.deployment != null && v.deployment.docker_context != null) || (v.statefulset != null && v.statefulset.docker_context != null))
   }
 
@@ -231,7 +231,7 @@ resource "docker_image" "app" {
 
 resource "docker_image" "remote_app" {
   for_each = {
-    for k, v in var.app_configs : k => v
+    for k, v in var.services : k => v
     if !var.cluster_create && ((v.deployment != null && v.deployment.docker_context == null) || (v.statefulset != null && v.statefulset.docker_context == null))
   }
   # The name MUST include the full registry path for pulling remote images,
@@ -278,7 +278,7 @@ resource "null_resource" "rollout_trigger_statefulset" {
 /*
 resource "null_resource" "kind_image_load_app" {
   for_each = (!var.cluster_create && (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux")) ? merge(docker_image.app, docker_image.remote_app) : {}
-  #for_each = (var.cluster_create) ? {} : var.app_configs
+  #for_each = (var.cluster_create) ? {} : var.services
 
   triggers = {
     # Safe lookup for the ID (ensures image is ready)
@@ -358,8 +358,8 @@ resource "null_resource" "kind_image_load_app" {
 
 # 3. Rollout trigger (to redeploy on image rebuild) for each app using for_each
 resource "null_resource" "rollout_trigger" {
-  # Use conditional map: empty map if true, app_configs if false
-  for_each = var.cluster_create ? {} : var.app_configs
+  # Use conditional map: empty map if true, services if false
+  for_each = var.cluster_create ? {} : var.services
 
   triggers = {
     timestamp = timestamp()
@@ -394,7 +394,7 @@ resource "kubectl_manifest" "storage_classes" {
 
 locals {
   get_dep_ready_path = {
-    for dep_app_name, dep_config in var.app_configs :
+    for dep_app_name, dep_config in var.services :
     dep_app_name => (
       try(dep_config.deployment.readiness_probe.path, null) != null ? dep_config.deployment.readiness_probe.path :
       try(dep_config.statefulset.readiness_probe.path, null) != null ? dep_config.statefulset.readiness_probe.path :
@@ -403,12 +403,12 @@ locals {
   }
 
   depends_on_details = {
-    for app_name, app_cfg in var.app_configs :
+    for app_name, app_cfg in var.services :
     app_name => {
       for dep_app_name, dep_override in try(app_cfg.deployment.depends_on, {}) :
       dep_app_name => merge(
         {
-          service_port = var.app_configs[dep_app_name].service.service_port
+          service_port = var.services[dep_app_name].service.service_port
           ready_path   = local.get_dep_ready_path[dep_app_name]
         },
         dep_override
@@ -419,9 +419,9 @@ locals {
 
 # 5. Create Kubernetes Service for each app using for_each
 resource "kubectl_manifest" "app_service" {
-  # for_each = var.cluster_create ? {} : var.app_configs
+  # for_each = var.cluster_create ? {} : var.services
   for_each = {
-    for k, v in var.app_configs : k => v
+    for k, v in var.services : k => v
     if !var.cluster_create && try(v.service, null) != null && toset(v.profiles) == toset(var.profiles)
   }
 
@@ -444,7 +444,7 @@ resource "kubectl_manifest" "app_service" {
 resource "kubectl_manifest" "app_deployment" {
   # Filter the map to only include apps that have a deployment config AND cluster_create is false
   for_each = {
-    for k, v in var.app_configs : k => v
+    for k, v in var.services : k => v
     if !var.cluster_create && try(v.deployment, null) != null && toset(v.profiles) == toset(var.profiles)
   }
 
@@ -507,7 +507,7 @@ resource "kubectl_manifest" "app_deployment" {
 # 4c. Create Kubernetes StatefulSet for each app using for_each
 resource "kubectl_manifest" "app_statefulset" {
   for_each = {
-    for k, v in var.app_configs : k => v
+    for k, v in var.services : k => v
     if !var.cluster_create && try(v.statefulset, null) != null && toset(v.profiles) == toset(var.profiles)
   }
 
@@ -559,7 +559,7 @@ resource "kubectl_manifest" "app_statefulset" {
 # 6. Create Kubernetes Ingress for each app that has ingress enabled
 resource "kubectl_manifest" "http_route" {
   for_each = {
-    for k, v in var.app_configs : k => v
+    for k, v in var.services : k => v
     if !var.cluster_create && v.ingress != null
   }
 

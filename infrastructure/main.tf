@@ -39,7 +39,7 @@ module "development" {
     }
   }
 
-  app_configs = {
+  services = {
     /*
     database_server = {
       service = {
