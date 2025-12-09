@@ -56,7 +56,7 @@ variable "services" {
     profiles = optional(list(string), ["all"])
 
     service = object({
-      app_name = string
+      container_name = string
       ports = list(object({
         name          = string
         target_port   = number

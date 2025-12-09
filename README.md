@@ -1,8 +1,20 @@
-# TODO: write decent readme
-This is an attempt to create a simple DevOps/MLOps framework to quickly deploy cloud native applications on Kubernetes.
-Please ignore everything below currently!
+# pixie-ops
+pixie-ops is a lightweight MLops/devops framework on top of Kubernetes & Terraform (OpenTofu) which simplifies cloud-native deployment to the same complexity level as Docker Compose. Ideal for demo's and proof-of-concepts in AI, machine learning pipelines and RAG. Works locally on minikube and on Azure cloud via push. Can pull images, but does not do CI/CD.
+You have to push everything into production via tofu/terraform apply whenever you want for maximum control and to avoid complex CI/CD madness.
+In research, we like to keep it simple!:tm:
+<sub><sup>But we want to provide stakeholders a working Kubernetes cluster which can make transistion into production easier.</sup></sub>
 
-## Installation on Ubuntu (native or WSL2 on Windows):
+## Feature list and restrictions
+The following features have been ported over from Docker compose into our own framework:
+* Currently only runs on-premise via minikube on Linux (Ubuntu/Debian) and WSL2 (Ubuntu/Debian) on Windows.
+* TODO: list everything else
+
+In order to simplify deployment significantly, the following restrictions and assumptions have been made:
+* TODO: list everything
+
+NOTE: Please ignore everything below currently!
+
+## Installation on Ubuntu/Debian (native or WSL2 on Windows):
 The following dependencies are needed:
 * Docker:
 ```
@@ -64,33 +76,42 @@ minikube start --driver=docker --gpus=all --memory=2048mb
 minikube delete
 ```
 
-
 * kubectl
-    ```
-    TODO
-    ```
+```
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --client
+```
+
 * Argo Workflows:
 https://github.com/argoproj/argo-workflows/releases/
-
 ```
 curl -sLO "https://github.com/argoproj/argo-workflows/releases/download/v3.7.2/argo-linux-amd64.gz" \
 && gunzip "argo-linux-amd64.gz" \
 && chmod +x "argo-linux-amd64" \
 && sudo mv "./argo-linux-amd64" /usr/local/bin/argo \
 && argo version
-
 ```
 
 * OpenTofu:
 ```
-TODO
+# Download the installer script:
+curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+
+# Give it execution permissions:
+chmod +x install-opentofu.sh
+
+# Run the installer:
+./install-opentofu.sh --install-method deb
+
+# Remove the installer:
+rm -f install-opentofu.sh
 ```
 
 * Azure CLI:
 ```
-TODO
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 ```
-
 
 ## Development: local deployment
 ```
@@ -150,14 +171,10 @@ curl http://$(kubectl get service pixie-ingest-svc --namespace pixie -o jsonpath
 curl -X POST http://$(kubectl get service pixie-ingest-svc --namespace pixie -o jsonpath='{.status.loadBalancer.ingress[0].ip}')/trigger; echo
 ```
 
-## TODO list:
+## TODO list (features):
 * Azure infrastructure + common API with local.
-* Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
 * For cloud use LoadBalancer for Gateway instead of NodePort like on local!!!
 * How can we pull from GHCR and provide a key for private repo's?
-* (What about images of multiple containers? Seems fine because split in multiple images.)
-* (Make environment variables overwrite what is in .env (in order to patch what is in pulled Docker image). Seems fine.)
-* Healthcheck for StatefulSet based on: https://github.com/pxl-research/pixie-tabular-db/blob/main/infra/docker/docker-compose.dev.yml
-
-Note: only use CI/CD to build containers when pushing to main.
-Changing production should be done by manually applying Terraform/OpenTofu.
+* Might want to support Shared Uploads: Use Deployment with single RWX PVC. All replicas share the same files.
+* (Test if environment variables overwrite what is in .env (in order to patch what is in pulled Docker image). Seems fine.)
+* Check if healthchecks can be simplified.

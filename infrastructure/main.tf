@@ -43,7 +43,7 @@ module "development" {
     /*
     database_server = {
       service = {
-        app_name            = "pixie-db"
+        container_name      = "pixie-db"
         ports = [
           {
             name            = "http"
@@ -81,7 +81,7 @@ module "development" {
     /*
     pixie-vector-db = {
       service = {
-        app_name        = "pixie-vector-db"
+        container_name      = "pixie-vector-db"
         ports = [
           {
             name            = "http"
@@ -124,7 +124,7 @@ module "development" {
     /*
     pixie-ingest = {
       service = {
-        app_name        = "pixie-ingest"
+        container_name      = "pixie-ingest"
         ports = [
           {
             name            = "http"
@@ -195,7 +195,7 @@ module "development" {
         "all"
       ]
       service = {
-        app_name        = "pixie-embedding-model"
+        container_name      = "pixie-embedding-model"
         ports = [
           {
             name            = "http"
@@ -227,7 +227,7 @@ module "development" {
     /*
     pixie-ingest-dup = {
       service = {
-        app_name            = "pixie-ingest-dup"
+        container_name      = "pixie-ingest-dup"
         ports = [
           {
             name            = "http"

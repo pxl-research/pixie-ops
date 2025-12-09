@@ -394,8 +394,8 @@ resource "kubectl_manifest" "storage_classes" {
 
 locals {
   get_dep_ready_path = {
-    for dep_app_name, dep_config in var.services :
-    dep_app_name => (
+    for dep_container_name, dep_config in var.services :
+    dep_container_name => (
       try(dep_config.deployment.readiness_probe.path, null) != null ? dep_config.deployment.readiness_probe.path :
       try(dep_config.statefulset.readiness_probe.path, null) != null ? dep_config.statefulset.readiness_probe.path :
       "/readyz"
@@ -403,13 +403,13 @@ locals {
   }
 
   depends_on_details = {
-    for app_name, app_cfg in var.services :
-    app_name => {
-      for dep_app_name, dep_override in try(app_cfg.deployment.depends_on, {}) :
-      dep_app_name => merge(
+    for container_name, app_cfg in var.services :
+    container_name => {
+      for dep_container_name, dep_override in try(app_cfg.deployment.depends_on, {}) :
+      dep_container_name => merge(
         {
-          service_port = var.services[dep_app_name].service.service_port
-          ready_path   = local.get_dep_ready_path[dep_app_name]
+          service_port = var.services[dep_container_name].service.service_port
+          ready_path   = local.get_dep_ready_path[dep_container_name]
         },
         dep_override
       )
@@ -426,7 +426,7 @@ resource "kubectl_manifest" "app_service" {
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/service.yaml", {
-    app_name            = each.value.service.app_name
+    container_name      = each.value.service.container_name
     namespace_name      = var.project_namespace_name
     ports               = each.value.service.ports
   })
@@ -449,7 +449,7 @@ resource "kubectl_manifest" "app_deployment" {
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/deployment.yaml", {
-    app_name               = each.value.service.app_name
+    container_name         = each.value.service.container_name
     namespace_name         = var.project_namespace_name
     deployment_target      = var.deployment_target
     ports                  = each.value.service.ports
@@ -512,7 +512,7 @@ resource "kubectl_manifest" "app_statefulset" {
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/statefulset.yaml", {
-      app_name               = each.value.service.app_name
+      container_name         = each.value.service.container_name
       namespace_name         = var.project_namespace_name
       deployment_target      = var.deployment_target
       ports                  = each.value.service.ports
@@ -564,7 +564,7 @@ resource "kubectl_manifest" "http_route" {
   }
 
   yaml_body = templatefile("${var.k8s_base_path}/httproute.yaml", {
-    app_name          = each.value.service.app_name
+    container_name    = each.value.service.container_name
     namespace_name    = var.project_namespace_name
     ingress_host      = var.ingress_host
     ingress_path      = each.value.ingress.path

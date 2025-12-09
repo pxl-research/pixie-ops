@@ -6,10 +6,10 @@ apiVersion: v1
 kind: Service
 metadata:
   # The service name is managed by Terraform's templatefile function.
-  name: ${app_name}-svc
+  name: ${container_name}-svc
   namespace: ${namespace_name}
   labels:
-    app: ${app_name}
+    app: ${container_name}
 spec:
   # ClusterIP is a stable virtual IP that never changes.
   # It is only reachable from within the cluster.
@@ -25,7 +25,7 @@ spec:
   # Both key and value must match and this for each key value pair.
   # We keep this simple by using 1 selector: (app: app_name)
   selector:
-    app: ${app_name}
+    app: ${container_name}
   ports:
 %{ for port in ports ~}
     - name: ${port.name}
