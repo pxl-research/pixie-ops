@@ -154,6 +154,7 @@ minikube delete
 ```
 
 ## Production: Azure Deployment on AKS
+This is actively being worked on, so ignore the notes below!
 ```
 cd infrastructure/environments/production
 az login --use-device-code
