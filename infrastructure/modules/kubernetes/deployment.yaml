@@ -105,7 +105,9 @@ spec:
           containerPort: ${port.target_port}
           protocol: ${port.protocol}
 %{ endfor ~}
-
+%{ if command != null }
+        command: ["/bin/sh", "-c", ${command}]
+%{ endif }
 %{ if liveness_probe_config.path != null || liveness_probe_config.command != null }
         livenessProbe:
 %{ if liveness_probe_config.path != null } # HTTP GET Probe

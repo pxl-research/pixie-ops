@@ -452,6 +452,7 @@ resource "kubectl_manifest" "app_deployment" {
     ports                  = each.value.service.ports
     image_name             = each.value.deployment.image_name
     image_tag              = each.value.deployment.image_tag
+    command                = each.value.deployment.command
     rollout_trigger        = try(null_resource.rollout_trigger_deployment[each.key].triggers.app_source_hash, "")
     image_pull_secret_name = ""
     replica_count          = each.value.deployment.replica_count
@@ -514,6 +515,7 @@ resource "kubectl_manifest" "app_statefulset" {
       ports                  = each.value.service.ports
       image_name             = each.value.statefulset.image_name
       image_tag              = each.value.statefulset.image_tag
+      command                = each.value.statefulset.command
       rollout_trigger        = null_resource.rollout_trigger_statefulset[each.key].triggers.app_source_hash
       image_pull_secret_name = ""
       replica_count          = each.value.statefulset.replica_count

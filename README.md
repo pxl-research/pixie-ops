@@ -109,7 +109,8 @@ export KUBE_CONTEXT=minikube
 # Wait until this gives results:
 kubectl describe node minikube | grep nvidia.com/gpu
 
-tofu destroy -auto-approve # if necessary, or when having an error
+ # if necessary, or when having an error
+tofu destroy -auto-approve
 minikube delete
 
 tofu init

@@ -208,6 +208,7 @@ module "development" {
         image_tag       = "1.0.0"
         docker_context  = local.apps_path
         dockerfile_path = "${local.apps_path}/embedding_model"
+        command         = "uvicorn main:app --host 0.0.0.0 --port 8000"
         request_cpu     = "128m"
         request_memory  = "1024Mi"
         limit_cpu       = "256m"

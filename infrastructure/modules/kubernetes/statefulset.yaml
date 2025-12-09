@@ -98,6 +98,9 @@ spec:
           containerPort: ${port.target_port}
           protocol: ${port.protocol}
 %{ endfor ~}
+%{ if command != null }
+        command: ["/bin/sh", "-c", ${command}]
+%{ endif }
         # Resource requests and limits
         resources:
           requests:

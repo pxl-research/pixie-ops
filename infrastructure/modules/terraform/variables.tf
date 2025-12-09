@@ -64,6 +64,7 @@ variable "app_configs" {
       image_tag               = string
       docker_context          = optional(string, null)
       dockerfile_path         = optional(string, null)
+      command                 = optional(string, null)
       request_cpu             = string
       request_memory          = string
       limit_cpu               = string
@@ -115,6 +116,7 @@ variable "app_configs" {
       image_tag              = string
       docker_context         = string
       dockerfile_path        = string
+      command                = optional(string, null)
       request_cpu            = string
       request_memory         = string
       limit_cpu              = string
