@@ -21,9 +21,18 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "3.9.0"
     }
-    kind = {
-      source  = "tehcyx/kind"
-      version = "0.9.0"
+
+    # Not used anymore because of lack of native GPU support
+    # Instead we use minikube without provider
+    # kind = {
+    #   source  = "tehcyx/kind"
+    #   version = "0.9.0"
+    # }
+
+    # Azure
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "4.47.0"
     }
   }
 }
@@ -38,45 +47,67 @@ locals {
 ########################################
 # PROVIDERS
 ########################################
+provider "azurerm" {
+  features {}
+  subscription_id = var.deployment_target == "azure" ? try(var.azure_subscription_id, "") : ""
+}
 
 # Kubernetes provider (default)
 provider "kubernetes" {
-  # FIX: Conditionally reference the single instance (index [0]) only if it exists (var.create_cluster is true).
-  # If the cluster is NOT being created, fall back to reading the kubeconfig file via the path (null value).
-  config_path = local.kube_config_path
-  config_context = "minikube"
+  # Configuration for minikube (Linux/WSL2)
+  # Only set these when deploying locally.
+  config_path    = (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux") ? local.kube_config_path : null
+  config_context = (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux") ? "minikube" : null
   /*
   host                   = kind_cluster.default[0].endpoint
   client_certificate     = kind_cluster.default[0].client_certificate
   client_key             = kind_cluster.default[0].client_key
   cluster_ca_certificate = kind_cluster.default[0].cluster_ca_certificate
   */
+
+  # Configuration for Azure AKS
+  # Only set these when deploying to Azure.
+  host                   = var.deployment_target == "azure" ? data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.host : null
+  client_certificate     = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.client_certificate) : null
+  client_key             = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.client_key) : null
+  cluster_ca_certificate = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.cluster_ca_certificate) : null
 }
 
 # Helm provider (default)
 provider "helm" {
   kubernetes = {
-    config_path = local.kube_config_path
-    config_context = "minikube"
-    # FIX: Conditionally reference the single instance (index [0]) only if it exists.
+    # Configuration for minikube (Linux/WSL2)
+    # Only set these when deploying locally.
+    config_path    = (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux") ? local.kube_config_path : null
+    config_context = (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux") ? "minikube" : null
+
     /*
     host                   = kind_cluster.default[0].endpoint
     client_certificate     = kind_cluster.default[0].client_certificate
     client_key             = kind_cluster.default[0].client_key
     cluster_ca_certificate = kind_cluster.default[0].cluster_ca_certificate
     */
+    host                   = var.deployment_target == "azure" ? data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.host : null
+    client_certificate     = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.client_certificate) : null
+    client_key             = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.client_key) : null
+    cluster_ca_certificate = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.cluster_ca_certificate) : null
   }
 }
 
 # Kubectl provider
 provider "kubectl" {
-  config_path = local.kube_config_path
-
+  config_path    = (var.deployment_target == "local_wsl2" || var.deployment_target == "local_linux") ? local.kube_config_path : null
   apply_retry_count = 10
+
+  host                   = var.deployment_target == "azure" ? data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.host : null
+  client_certificate     = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.client_certificate) : null
+  client_key             = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.client_key) : null
+  cluster_ca_certificate = var.deployment_target == "azure" ? base64decode(data.azurerm_kubernetes_cluster.pixie_aks_data.kube_config.0.cluster_ca_certificate) : null
 }
 
 # Null provider
-# provider "null" {}
+provider "null" {
+}
 
 # Docker provider
 provider "docker" {

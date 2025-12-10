@@ -2,7 +2,7 @@
 pixie-ops is a lightweight MLops/devops framework on top of Kubernetes & Terraform (OpenTofu) which simplifies cloud-native deployment to the same complexity level as Docker Compose. Ideal for demo's and proof-of-concepts in AI, machine learning pipelines and RAG. Works locally on minikube and on Azure cloud via push. Can pull images, but does not do CI/CD.
 You have to push everything into production via tofu/terraform apply whenever you want for maximum control and to avoid complex CI/CD madness. \
 In research, we like to keep it simple!&trade; \
-<sub><sup>But we want to provide stakeholders a working Kubernetes cluster which can make transistion into production easier.</sup></sub>
+<sub><sup>But we want to provide stakeholders a working Kubernetes cluster which can make transistion into production and future scaling easier.</sup></sub>
 
 ## Feature list and restrictions
 The following features have been ported over from Docker compose into our own framework:
